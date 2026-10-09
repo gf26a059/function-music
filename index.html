@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>関数ミュージック</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700;900&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: a single spinning wireframe cube heads a list of six rooms; each room is a wide row with its own colour field */
+:root{
+  --ink:#08080d;
+  --fg:#eceaf4;
+  --muted:#8a879c;
+  --line:rgba(236,234,244,.12);
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--ink);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.7}
+.wrap{max-width:980px;margin:0 auto;padding-inline:16px;padding-block:48px 72px;display:flex;flex-direction:column;gap:36px}
+header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:24px}
+@media (max-width:640px){header{grid-template-columns:1fr}#cube{justify-self:start}}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;margin:0 0 12px}
+h1{font-weight:900;font-size:clamp(40px,7vw,76px);line-height:1.05;margin:0;letter-spacing:.04em;text-wrap:balance}
+.lede{margin:16px 0 0;color:var(--muted);max-width:44ch}
+#cube{width:180px;height:180px;display:block}
+.rooms{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.room a{display:grid;grid-template-columns:120px minmax(0,1fr) auto;align-items:center;gap:20px;padding:14px 18px 14px 14px;border:1px solid var(--line);border-radius:16px;color:inherit;text-decoration:none;transition:border-color .25s,transform .25s;background:rgba(255,255,255,.02)}
+.room a:hover{border-color:rgba(236,234,244,.35);transform:translateX(4px)}
+.room a:focus-visible{outline:2px solid var(--fg);outline-offset:3px}
+.swatch{height:72px;border-radius:10px}
+.room h2{margin:0;font-size:19px;font-weight:700;letter-spacing:.04em}
+.room p{margin:2px 0 0;color:var(--muted);font-size:13.5px}
+.tag{font-family:var(--mono);font-size:11.5px;color:var(--muted);letter-spacing:.08em;white-space:nowrap}
+@media (max-width:640px){.room a{grid-template-columns:72px minmax(0,1fr)}.tag{grid-column:2}.swatch{height:56px}}
+footer{color:var(--muted);font-size:13px;border-top:1px solid var(--line);padding-top:18px}
+footer code{font-family:var(--mono);color:var(--fg)}
+</style>
+
+<style>
+.sitenav{position:relative;z-index:10;display:flex;align-items:center;gap:4px;overflow-x:auto;padding:10px 16px;
+  background:rgba(0,0,0,.38);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08);
+  font:13px/1.4 system-ui,"Hiragino Sans","Yu Gothic",sans-serif;scrollbar-width:none}
+.sitenav::-webkit-scrollbar{display:none}
+.sitenav a{color:rgba(255,255,255,.62);text-decoration:none;padding:5px 11px;border-radius:999px;white-space:nowrap}
+.sitenav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.sitenav a[aria-current="page"]{color:#fff;background:rgba(255,255,255,.14)}
+.sitenav a:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.sitenav .home{font-weight:700;color:#fff;margin-right:8px}
+</style>
+</head>
+<body>
+<nav class="sitenav" aria-label="部屋の切り替え"><a class="home" href="index.html">関数ミュージック</a><a href="trance.html">トランス</a><a href="bigband.html">ビッグバンド</a><a href="whip.html">ウィップ</a><a href="rain.html">雨音</a><a href="ice.html">氷チル</a><a href="deep.html">深海</a></nav>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">f(t) music · 6 rooms</p>
+      <h1>関数ミュージック</h1>
+      <p class="lede">数式のグラフがそのまま音楽になる、6つの部屋。どの部屋でも式を書き換えれば、次の音からすぐに曲が変わります。</p>
+    </div>
+    <canvas id="cube" aria-hidden="true"></canvas>
+  </header>
+
+  <ul class="rooms">
+    <li class="room"><a href="trance.html">
+      <div class="swatch" style="background:linear-gradient(120deg,#46e6ff,#ff4fd2)"></div>
+      <div><h2>関数トランス</h2><p>スーパーソウのアルペジオと4つ打ち。ネオンの立方体がキックで脈打つ。</p></div>
+      <span class="tag">TRANCE · 138 BPM</span></a></li>
+    <li class="room"><a href="bigband.html">
+      <div class="swatch" style="background:linear-gradient(120deg,#0c0b09 20%,#f2b332)"></div>
+      <div><h2>関数ビッグバンド</h2><p>ホーンのキメ、ウォーキング・ベース、7/4 の高速スウィング。</p></div>
+      <span class="tag">SWING · 232 BPM</span></a></li>
+    <li class="room"><a href="whip.html">
+      <div class="swatch" style="background:linear-gradient(176deg,#ffffff,#5b616b 52%,#e7ebf0 70%,#ff5c8a)"></div>
+      <div><h2>関数ウィップ</h2><p>歪んだベースとムチの一撃。鏡の床でクロームの立方体が弾かれる。</p></div>
+      <span class="tag">MINIMAL DANCE · 127 BPM</span></a></li>
+    <li class="room"><a href="rain.html">
+      <div class="swatch" style="background:linear-gradient(180deg,#16222a,#0d1418 60%,#e6c58f)"></div>
+      <div><h2>関数の雨音</h2><p>低い和音がゆっくり満ち、ハンドパンがときどき鳴る。夜の水面に雨。</p></div>
+      <span class="tag">AMBIENT · 64 BPM</span></a></li>
+    <li class="room"><a href="ice.html">
+      <div class="swatch" style="background:linear-gradient(180deg,#0c2236,#a8e4ff 70%,#ffb36b)"></div>
+      <div><h2>氷チル</h2><p>冷たいピアノと鉄琴、遠くの鈴。オーロラの下でかまくらが灯る。</p></div>
+      <span class="tag">ICE CHILL · 76 BPM</span></a></li>
+    <li class="room"><a href="deep.html">
+      <div class="swatch" style="background:linear-gradient(180deg,#125c70,#03080f 75%,#5ff2d8)"></div>
+      <div><h2>関数の深海</h2><p>泡の低音、溶けたピアノ、遠いオーケストラ。深く潜るほど光が消える。</p></div>
+      <span class="tag">ABYSSAL · 52 BPM</span></a></li>
+  </ul>
+
+  <footer>音はブラウザの中で合成しています。各部屋の再生ボタンかスペースキーで鳴らしてください。式で使える変数は <code>t</code>・<code>b</code>・<code>bar</code>・<code>k</code>。</footer>
+</div>
+
+<script>
+(() => {
+  const c = document.getElementById('cube'), g = c.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const V = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+  const E = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+  const k = Math.min(2, devicePixelRatio || 1); c.width = c.height = 180*k;
+  function draw(now){
+    const s = now/1000, W = c.width, beat = (s % 0.95), env = Math.exp(-beat*11) + (beat > 0.24 ? 0.7*Math.exp(-(beat-0.24)*11) : 0);
+    const size = W*0.2*(1 + 0.18*env), ax = reduce ? 0.5 : s*0.5, ay = reduce ? 0.6 : s*0.7;
+    g.clearRect(0,0,W,W);
+    const P = V.map(([x,y,z]) => { const y1 = y*Math.cos(ax) - z*Math.sin(ax), z1 = y*Math.sin(ax) + z*Math.cos(ax), x2 = x*Math.cos(ay) + z1*Math.sin(ay), z2 = -x*Math.sin(ay) + z1*Math.cos(ay), p = 3.4/(z2+3.4); return [W/2 + x2*size*p, W/2 + y1*size*p]; });
+    const grad = g.createLinearGradient(0,0,W,W); grad.addColorStop(0,'#46e6ff'); grad.addColorStop(0.5,'#f2b332'); grad.addColorStop(1,'#5ff2d8');
+    g.strokeStyle = grad; g.lineWidth = 1.6*k; g.shadowColor = 'rgba(236,234,244,.6)'; g.shadowBlur = (6 + 18*env)*k;
+    g.beginPath(); for(const [a,b] of E){ g.moveTo(...P[a]); g.lineTo(...P[b]); } g.stroke();
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+</script>
+</body>
+</html>

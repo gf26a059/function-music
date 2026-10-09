@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>関数ビッグバンド</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;700;900&display=swap">
+<style>
+/* Layout: one spotlight, one cube on a black stage; hero = name + huge tempo counter, then a hairline console and four function graphs */
+:root{
+  --ink:#0c0b09;
+  --panel:rgba(20,18,14,.78);
+  --line:rgba(239,232,216,.14);
+  --fg:#efe8d8;
+  --muted:#8f877a;
+  --amber:#f2b332;
+  --ochre:#c7ad86;
+  --red:#d2412c;
+  --display:"Anton","Impact","Arial Narrow",sans-serif;
+  --body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--ink);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.6}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+.wrap{position:relative;z-index:1;max-width:1120px;margin:0 auto;padding-inline:16px;padding-block:32px 56px;display:flex;flex-direction:column;gap:22px}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px 32px;border-bottom:1px solid var(--line);padding-bottom:18px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--amber);text-transform:uppercase;margin:0 0 10px}
+h1{font-weight:900;font-size:clamp(30px,5.4vw,56px);line-height:1.05;margin:0;letter-spacing:.02em;text-wrap:balance}
+.sub{margin:10px 0 0;color:var(--muted);max-width:44ch;font-size:14px}
+.tempo{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.bpm-big{font-family:var(--display);font-size:clamp(72px,13vw,148px);line-height:.85;color:var(--amber);font-variant-numeric:tabular-nums;letter-spacing:.01em;transition:color .15s}
+.bpm-big.rush{color:var(--red)}
+.bpm-big small{font-size:.22em;color:var(--fg);letter-spacing:.2em;margin-left:.3em}
+.beats{display:flex;gap:6px}
+.beats i{width:14px;height:4px;background:var(--line);display:block;transition:background .06s}
+.beats i.on{background:var(--amber)}
+.beats i.one.on{background:var(--fg)}
+
+.console{display:flex;flex-wrap:wrap;align-items:center;gap:14px 26px;padding:14px 0;border-bottom:1px solid var(--line)}
+.play{width:54px;height:54px;border:1px solid var(--amber);background:transparent;color:var(--amber);cursor:pointer;display:grid;place-items:center;flex:none}
+.play:hover{background:var(--amber);color:var(--ink)}
+.play svg{width:20px;height:20px;fill:currentColor}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+.ctl{display:flex;flex-direction:column;gap:4px;font-family:var(--mono);font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);min-width:0}
+.ctl .row{display:flex;align-items:center;gap:10px}
+.ctl output{color:var(--fg);letter-spacing:.04em;font-size:12.5px;font-variant-numeric:tabular-nums;min-width:4ch}
+input[type=range]{accent-color:var(--amber);width:120px}
+select{background:var(--ink);color:var(--fg);border:1px solid var(--line);padding:6px 8px;font-family:var(--body);font-size:14px;border-radius:0}
+.toggle{background:transparent;color:var(--muted);border:1px solid var(--line);padding:7px 14px;font-family:var(--body);font-size:13px;cursor:pointer}
+.toggle[aria-pressed="true"]{color:var(--red);border-color:var(--red)}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line)}
+@media (max-width:780px){.grid{grid-template-columns:1fr}.tempo{align-items:flex-start}}
+.card{--track:var(--amber);background:var(--panel);padding:16px;display:flex;flex-direction:column;gap:10px;min-width:0;transition:opacity .2s}
+.card.is-muted{opacity:.4}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.card h2{margin:0;font-size:15px;font-weight:700;letter-spacing:.04em}
+.card h2 span{font-family:var(--mono);font-weight:400;color:var(--track);margin-right:8px}
+.card .desc{margin:3px 0 0;color:var(--muted);font-size:12.5px;line-height:1.5}
+.readout{font-family:var(--mono);font-size:13px;color:var(--track);white-space:nowrap;font-variant-numeric:tabular-nums}
+.expr{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:14px;min-width:0}
+.expr label{color:var(--track);white-space:nowrap}
+.formula{flex:1;min-width:0;background:transparent;border:0;border-bottom:1px solid var(--line);color:var(--fg);font-family:var(--mono);font-size:14px;padding:7px 2px}
+.formula:focus{border-bottom-color:var(--track);outline:none}
+.formula.bad{border-bottom-color:var(--red)}
+.err{font-family:var(--mono);font-size:12px;color:var(--red);min-height:1.2em;margin-top:-6px}
+canvas.graph{width:100%;height:140px;display:block}
+.card-foot{display:flex;justify-content:flex-end}
+.mute{background:transparent;border:0;color:var(--muted);font-size:12px;padding:2px 0;cursor:pointer;font-family:var(--mono);letter-spacing:.12em}
+.mute[aria-pressed="true"]{color:var(--red)}
+
+.help{color:var(--muted);font-size:13.5px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 32px}
+.help p{margin:0;max-width:60ch}
+.help code{font-family:var(--mono);color:var(--fg);font-size:12.5px}
+.help b{color:var(--fg);font-weight:700}
+</style>
+
+<style>
+.sitenav{position:relative;z-index:10;display:flex;align-items:center;gap:4px;overflow-x:auto;padding:10px 16px;
+  background:rgba(0,0,0,.38);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08);
+  font:13px/1.4 system-ui,"Hiragino Sans","Yu Gothic",sans-serif;scrollbar-width:none}
+.sitenav::-webkit-scrollbar{display:none}
+.sitenav a{color:rgba(255,255,255,.62);text-decoration:none;padding:5px 11px;border-radius:999px;white-space:nowrap}
+.sitenav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.sitenav a[aria-current="page"]{color:#fff;background:rgba(255,255,255,.14)}
+.sitenav a:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.sitenav .home{font-weight:700;color:#fff;margin-right:8px}
+</style>
+</head>
+<body>
+<nav class="sitenav" aria-label="部屋の切り替え"><a class="home" href="index.html">関数ミュージック</a><a href="trance.html">トランス</a><a href="bigband.html" aria-current="page">ビッグバンド</a><a href="whip.html">ウィップ</a><a href="rain.html">雨音</a><a href="ice.html">氷チル</a><a href="deep.html">深海</a></nav>
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">f(t) swing / big band</p>
+      <h1>関数ビッグバンド</h1>
+      <p class="sub">ホーンのキメ、ウォーキング・ベース、ライドのレガート。全部グラフで指揮する。テンポを上げすぎると、立方体が汗をかく。</p>
+    </div>
+    <div class="tempo">
+      <div class="bpm-big" id="bpmBig">230<small>BPM</small></div>
+      <div class="beats" id="beats" aria-hidden="true"></div>
+    </div>
+  </header>
+
+  <section class="console" aria-label="再生コントロール">
+    <button class="play" id="play" aria-label="再生"><svg viewBox="0 0 24 24" id="playIcon"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+    <div class="ctl"><label for="bpm">Tempo</label>
+      <div class="row"><input type="range" id="bpm" min="100" max="330" value="230"><output id="bpmOut">230</output></div></div>
+    <div class="ctl"><label for="swing">Swing</label>
+      <div class="row"><input type="range" id="swing" min="50" max="75" value="64"><output id="swingOut">64%</output></div></div>
+    <div class="ctl"><label for="sig">拍子</label>
+      <select id="sig"><option value="4">4/4</option><option value="5">5/4</option><option value="7">7/4</option></select></div>
+    <div class="ctl"><label for="preset">プリセット</label><select id="preset"></select></div>
+    <div class="ctl"><label for="vol">Volume</label>
+      <div class="row"><input type="range" id="vol" min="0" max="100" value="80"><output id="volOut">80</output></div></div>
+    <button class="toggle" id="rush" aria-pressed="false">走る：毎小節 +2 BPM</button>
+  </section>
+
+  <section class="grid" id="grid" aria-label="関数トラック"></section>
+
+  <section class="help">
+    <p><b>変数</b>　<code>t</code> = 8分音符のステップ、<code>b</code> = 拍（t/2）、<code>bar</code> = 小節、<code>k</code> = 小節内の位置（0〜n−1）、<code>n</code> = 1小節のステップ数（4/4なら8、7/4なら14）。</p>
+    <p><b>関数</b>　<code>sin cos abs floor round min max PI</code> などに加えて <code>fract tri saw sq clamp rand</code>。比較は真で1。<code>%</code> は常に正。配列 <code>[0,3,5][k]</code> も使えます。</p>
+    <p><b>音</b>　キーは C ドリアン。ホーンは度数から4声の7thコードを積みます。h(t) が0より大きいステップで吹き、値が1以上なら8分音符その数だけ伸ばし、2以上でクラッシュ。d(t) が0.8を超えるとドラムソロ。スペースキーで再生／停止。</p>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- expression parser (no eval) ---------- */
+const fract = x => x - Math.floor(x);
+const FUNCS = {
+  sin:Math.sin, cos:Math.cos, tan:Math.tan, atan:Math.atan, atan2:Math.atan2,
+  abs:Math.abs, floor:Math.floor, ceil:Math.ceil, round:Math.round, sqrt:Math.sqrt, exp:Math.exp, log:Math.log,
+  min:Math.min, max:Math.max, pow:Math.pow, sign:Math.sign, hypot:Math.hypot, trunc:Math.trunc,
+  fract, tri:x => 4*Math.abs(fract(x)-0.5)-1, saw:x => 2*fract(x)-1, sq:x => fract(x)<0.5 ? 1 : -1,
+  clamp:(x,a,b) => Math.min(Math.max(x,a),b), rand:x => fract(Math.sin(x*12.9898+78.233)*43758.5453),
+  mod:(a,n) => ((a%n)+n)%n
+};
+const CONSTS = {PI:Math.PI, E:Math.E, TAU:Math.PI*2, pi:Math.PI};
+const VARS = {t:1, b:1, bar:1, k:1, n:1};
+const OPS = {
+  '||':(a,b)=>(a||b)?1:0, '&&':(a,b)=>(a&&b)?1:0,
+  '<':(a,b)=>+(a<b), '>':(a,b)=>+(a>b), '<=':(a,b)=>+(a<=b), '>=':(a,b)=>+(a>=b), '==':(a,b)=>+(a===b), '!=':(a,b)=>+(a!==b),
+  '+':(a,b)=>a+b, '-':(a,b)=>a-b, '*':(a,b)=>a*b, '/':(a,b)=>a/b, '%':(a,b)=>((a%b)+b)%b
+};
+const LEVELS = [['||'],['&&'],['<','>','<=','>=','==','!='],['+','-'],['*','/','%']];
+let SPB = 8; // steps (eighths) per bar
+
+function compile(src){
+  src = src.trim();
+  if(!src) throw Error('式が空です');
+  const re = /\s*(?:(\d+\.?\d*(?:e[+-]?\d+)?|\.\d+)|([A-Za-z_]\w*)|(\*\*|<=|>=|==|!=|&&|\|\||[-+*\/%^()<>?:,!\[\]]))/y;
+  const toks = [];
+  while(re.lastIndex < src.length){
+    const at = re.lastIndex, m = re.exec(src);
+    if(!m) throw Error('「' + src.slice(at).trim()[0] + '」は使えません');
+    toks.push(m[1]!=null ? {k:'n', v:parseFloat(m[1])} : m[2]!=null ? {k:'id', v:m[2]} : {k:'op', v:m[3]});
+  }
+  let i = 0;
+  const isOp = v => toks[i] && toks[i].k==='op' && toks[i].v===v;
+  const eat = v => { if(!isOp(v)) throw Error('「' + v + '」が足りません'); i++; };
+  function ternary(){
+    const c = level(0);
+    if(isOp('?')){ i++; const a = ternary(); eat(':'); const b = ternary(); return e => c(e) ? a(e) : b(e); }
+    return c;
+  }
+  function level(n){
+    if(n === LEVELS.length) return unary();
+    let l = level(n+1);
+    while(toks[i] && toks[i].k==='op' && LEVELS[n].includes(toks[i].v)){
+      const f = OPS[toks[i++].v], L = l, R = level(n+1);
+      l = e => f(L(e), R(e));
+    }
+    return l;
+  }
+  function unary(){
+    if(isOp('-')){ i++; const a = unary(); return e => -a(e); }
+    if(isOp('+')){ i++; return unary(); }
+    if(isOp('!')){ i++; const a = unary(); return e => +!a(e); }
+    return power();
+  }
+  function power(){
+    const a = postfix();
+    if(isOp('^') || isOp('**')){ i++; const b = unary(); return e => Math.pow(a(e), b(e)); }
+    return a;
+  }
+  function list(close){
+    const items = [];
+    if(!isOp(close)){ items.push(ternary()); while(isOp(',')){ i++; items.push(ternary()); } }
+    eat(close);
+    return items;
+  }
+  function postfix(){
+    let a = primary();
+    while(isOp('[')){
+      i++; const idx = ternary(); eat(']'); const A = a;
+      a = e => { const arr = A(e); if(!Array.isArray(arr) || !arr.length) return NaN; const n = arr.length; return arr[((Math.floor(idx(e))%n)+n)%n]; };
+    }
+    return a;
+  }
+  function primary(){
+    const tk = toks[i];
+    if(!tk) throw Error('式が途中で終わっています');
+    if(tk.k==='n'){ i++; const v = tk.v; return () => v; }
+    if(tk.k==='id'){
+      i++; const name = tk.v;
+      if(isOp('(')){
+        i++; const args = list(')'); const f = FUNCS[name];
+        if(!f) throw Error('関数 ' + name + '() はありません');
+        return e => f(...args.map(a => a(e)));
+      }
+      if(VARS[name]) return e => e[name];
+      if(name in CONSTS){ const v = CONSTS[name]; return () => v; }
+      throw Error('変数 ' + name + ' はありません');
+    }
+    if(isOp('(')){ i++; const a = ternary(); eat(')'); return a; }
+    if(isOp('[')){ i++; const items = list(']'); return e => items.map(x => x(e)); }
+    throw Error('「' + tk.v + '」の位置が読めません');
+  }
+  const root = ternary();
+  if(i < toks.length) throw Error('「' + toks[i].v + '」以降が読めません');
+  const env = {t:0, b:0, bar:0, k:0, n:8};
+  const fn = t => {
+    env.t = t; env.b = t/2; env.n = SPB; env.bar = Math.floor(t/SPB); env.k = ((t%SPB)+SPB)%SPB;
+    const v = root(env); return typeof v === 'number' ? v : NaN;
+  };
+  fn(0); fn(37.5);
+  return fn;
+}
+
+/* ---------- theory: C dorian ---------- */
+const SCALE = [0,2,3,5,7,9,10];
+const SEVENTH = ['m7','m7','maj7','7','m7','m7♭5','maj7'];
+const NAMES = ['C','C#','D','E♭','E','F','F#','G','A♭','A','B♭','B'];
+const degToMidi = (base, d) => base + 12*Math.floor(d/7) + SCALE[((d%7)+7)%7];
+const midiName = m => NAMES[((m%12)+12)%12] + (Math.floor(m/12)-1);
+const mtof = m => 440*Math.pow(2,(m-69)/12);
+const clamp = (x,a,b) => Math.min(Math.max(x,a),b);
+const rnd = FUNCS.rand;
+
+/* ---------- tracks & presets ---------- */
+const TRACKS = [
+  {id:'horn',  fn:'f(t)', name:'ホーン・ボイシング', color:'--amber', bars:4,
+   desc:'吹く和音の根音（度数）。その上に3度ずつ4声を積む。'},
+  {id:'hits',  fn:'h(t)', name:'キメ（ホーンが鳴る場所）', color:'--fg', bars:4, stems:true,
+   desc:'0より大きい所で一斉に吹く。1以上は伸ばす長さ、2以上でクラッシュ。'},
+  {id:'bass',  fn:'g(t)', name:'ウォーキング・ベース', color:'--ochre', bars:4,
+   desc:'4分音符ごとに歩くウッドベース。値は C からの度数。'},
+  {id:'drums', fn:'d(t)', name:'ドラムの熱量', color:'--red', bars:16, fixed:[0,1],
+   desc:'0〜1。スネアのコンピングが増え、0.8を超えるとソロに突入。'}
+];
+const PRESETS = {
+  seven:{name:'7/4 の鞭', bpm:232, sig:7, swing:60,
+    horn:'[0,0,3,4,6,4,3][floor(b)] + 7*(bar%4==3)',
+    hits:'(k==0)*2 + (k==3) + 0.5*(k==6) + 3*(k==10)*(bar%2)',
+    bass:'[0,2,4,6,7,6,4][floor(b)] + 3*(floor(bar/2)%2)',
+    drums:'0.3 + 0.65*(bar%8>=6)'},
+  caravan:{name:'倍テン・キャラバン', bpm:290, sig:4, swing:56,
+    horn:'round(3*sin(t*PI/16))',
+    hits:'(k==7) + 3*(t%32==0) + 0.5*(t%32==11)',
+    bass:'[0,4,2,6][floor(b)] + round(2*sin(bar))',
+    drums:'fract(bar/16)*1.1'},
+  medium:{name:'ミディアム・スウィング', bpm:160, sig:4, swing:66,
+    horn:'[0,3,1,4][bar]',
+    hits:'2*(t%32==30) + 0.5*(t%16==5)',
+    bass:'[0,2,3,4,7,6,4,2][floor(b)]',
+    drums:'0.25 + 0.15*sin(bar)'},
+  five:{name:'5/4 の黄金比', bpm:200, sig:5, swing:62,
+    horn:'floor(7*fract(bar*0.618))',
+    hits:'(rand(t*0.618)>0.82) + 2*(k==0)*(bar%4==0)',
+    bass:'floor(9*fract(t*0.309)) - 2',
+    drums:'0.35 + 0.6*tri(bar/12)'}
+};
+
+const state = {horn:null, hits:null, bass:null, drums:null};
+const muted = {horn:false, hits:false, bass:false, drums:false};
+const cards = {};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+const grid = document.getElementById('grid');
+for(const tr of TRACKS){
+  const el = document.createElement('article');
+  el.className = 'card';
+  el.style.setProperty('--track', `var(${tr.color})`);
+  el.innerHTML = `
+    <div class="card-head">
+      <div><h2><span>${tr.fn}</span>${tr.name}</h2><p class="desc">${tr.desc}</p></div>
+      <span class="readout">—</span>
+    </div>
+    <div class="expr"><label for="fx-${tr.id}">${tr.fn} =</label><input class="formula" id="fx-${tr.id}" spellcheck="false" autocomplete="off"></div>
+    <div class="err"></div>
+    <canvas class="graph" aria-label="${tr.name}のグラフ"></canvas>
+    <div class="card-foot"><button class="mute" id="mute-${tr.id}" aria-pressed="false">MUTE</button></div>`;
+  grid.appendChild(el);
+  const c = {tr, el, input:el.querySelector('.formula'), err:el.querySelector('.err'), canvas:el.querySelector('canvas'), readout:el.querySelector('.readout'), color:css(tr.color)};
+  cards[tr.id] = c;
+  c.input.addEventListener('input', () => setExpr(tr.id, c.input.value));
+  el.querySelector('.mute').addEventListener('click', e => {
+    muted[tr.id] = !muted[tr.id];
+    e.currentTarget.setAttribute('aria-pressed', muted[tr.id]);
+    el.classList.toggle('is-muted', muted[tr.id]);
+  });
+}
+function setExpr(id, src){
+  const c = cards[id];
+  try { state[id] = compile(src); c.input.classList.remove('bad'); c.err.textContent = ''; }
+  catch(e){ c.input.classList.add('bad'); c.err.textContent = e.message; }
+  graphsDirty = true;
+}
+const val = (id, t) => { try { return state[id] ? state[id](t) : NaN; } catch(e){ return NaN; } };
+
+/* ---------- controls ---------- */
+let bpm = 230, swing = 0.64, volume = 0.8, rushing = false, sig = 4;
+const $ = id => document.getElementById(id);
+const bpmIn = $('bpm'), bpmOut = $('bpmOut'), bpmBig = $('bpmBig');
+function setBpm(v){
+  bpm = Math.round(clamp(+v, 100, 330)); bpmIn.value = bpm; bpmOut.textContent = bpm;
+  bpmBig.innerHTML = bpm + '<small>BPM</small>';
+}
+bpmIn.addEventListener('input', () => setBpm(bpmIn.value));
+const swingIn = $('swing');
+function setSwing(v){ swing = v/100; swingIn.value = v; $('swingOut').textContent = v + '%'; }
+swingIn.addEventListener('input', () => setSwing(+swingIn.value));
+const sigSel = $('sig'), beatsEl = $('beats');
+function setSig(v){
+  sig = +v; SPB = sig*2; sigSel.value = sig;
+  beatsEl.innerHTML = Array.from({length:sig}, (_,i) => `<i class="${i?'':'one'}"></i>`).join('');
+  graphsDirty = true;
+}
+sigSel.addEventListener('change', () => setSig(sigSel.value));
+$('vol').addEventListener('input', e => {
+  volume = e.target.value/100; $('volOut').textContent = e.target.value;
+  if(ctx && playing) master.gain.setTargetAtTime(volume, ctx.currentTime, 0.03);
+});
+const rushBtn = $('rush');
+rushBtn.addEventListener('click', () => { rushing = !rushing; rushBtn.setAttribute('aria-pressed', rushing); bpmBig.classList.toggle('rush', rushing); });
+const presetSel = $('preset');
+for(const [k,p] of Object.entries(PRESETS)){ const o = document.createElement('option'); o.value = k; o.textContent = p.name; presetSel.appendChild(o); }
+function loadPreset(k){
+  const p = PRESETS[k];
+  setSig(p.sig); setBpm(p.bpm); setSwing(p.swing);
+  for(const tr of TRACKS){ cards[tr.id].input.value = p[tr.id]; setExpr(tr.id, p[tr.id]); }
+}
+presetSel.addEventListener('change', () => loadPreset(presetSel.value));
+
+/* ---------- audio ---------- */
+let ctx, master, drumBus, hornBus, bassBus, room, noiseBuf;
+let playing = false, beatIdx = 0, nextBeat = 0, timer = null;
+const events = [];
+
+function initAudio(){
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -14; comp.ratio.value = 3.5; comp.attack.value = 0.004; comp.release.value = 0.12;
+  master = ctx.createGain(); master.gain.value = 0; master.connect(comp); comp.connect(ctx.destination);
+  room = ctx.createConvolver();
+  const len = ctx.sampleRate*1.5, buf = ctx.createBuffer(2, len, ctx.sampleRate);
+  for(let ch=0; ch<2; ch++){ const d = buf.getChannelData(ch); for(let i=0;i<len;i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len, 4); }
+  room.buffer = buf;
+  const roomOut = ctx.createGain(); roomOut.gain.value = 0.22; room.connect(roomOut); roomOut.connect(master);
+  drumBus = ctx.createGain(); drumBus.gain.value = 0.9; drumBus.connect(master);
+  const dSend = ctx.createGain(); dSend.gain.value = 0.25; drumBus.connect(dSend); dSend.connect(room);
+  hornBus = ctx.createGain(); hornBus.gain.value = 0.11; hornBus.connect(master); hornBus.connect(room);
+  bassBus = ctx.createGain(); bassBus.gain.value = 0.55; bassBus.connect(master);
+  noiseBuf = ctx.createBuffer(1, ctx.sampleRate*2, ctx.sampleRate);
+  const d = noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+}
+function env(t, peak, decay, attack=0.002){
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(peak, t+attack); g.gain.exponentialRampToValueAtTime(0.0001, t+attack+decay);
+  return g;
+}
+function noise(t, dur, dest){ const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.connect(dest); s.start(t, Math.random()); s.stop(t+dur); }
+function filt(type, f, q=1){ const b = ctx.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; return b; }
+
+function ride(t, v){
+  const g = env(t, 0.16*v, 0.55), hp = filt('highpass', 6500), bp = filt('bandpass', 9500, 0.7);
+  for(const f of [263, 400, 421, 474, 587, 845]){ const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = f*1.42; o.connect(bp); o.start(t); o.stop(t+0.6); }
+  bp.connect(hp); hp.connect(g); g.connect(drumBus);
+  const ping = env(t, 0.03*v, 0.35), so = ctx.createOscillator(); so.frequency.value = 4970; so.connect(ping); ping.connect(drumBus); so.start(t); so.stop(t+0.4);
+}
+function chick(t){ const g = env(t, 0.12, 0.04), f = filt('highpass', 8000); f.connect(g); g.connect(drumBus); noise(t, 0.06, f); }
+function crash(t){ const g = env(t, 0.32, 1.8, 0.004), f = filt('highpass', 5200); f.connect(g); g.connect(drumBus); noise(t, 2, f); }
+function kick(t, v){
+  const o = ctx.createOscillator(), g = env(t, v, 0.28);
+  o.frequency.setValueAtTime(115, t); o.frequency.exponentialRampToValueAtTime(48, t+0.12);
+  o.connect(g); g.connect(drumBus); o.start(t); o.stop(t+0.32);
+}
+function snare(t, v){
+  const g = env(t, 0.5*v, 0.16), f = filt('bandpass', 2100, 0.6); f.connect(g); g.connect(drumBus); noise(t, 0.2, f);
+  const o = ctx.createOscillator(), og = env(t, 0.35*v, 0.07); o.type = 'triangle';
+  o.frequency.setValueAtTime(230, t); o.frequency.exponentialRampToValueAtTime(170, t+0.07);
+  o.connect(og); og.connect(drumBus); o.start(t); o.stop(t+0.1);
+}
+function tom(t, v, hz){
+  const o = ctx.createOscillator(), g = env(t, 0.55*v, 0.22);
+  o.frequency.setValueAtTime(hz*1.4, t); o.frequency.exponentialRampToValueAtTime(hz, t+0.05);
+  o.connect(g); g.connect(drumBus); o.start(t); o.stop(t+0.26);
+}
+function bassPluck(midi, t, len){
+  const f = mtof(midi), g = env(t, 0.9, len*0.95, 0.004), lp = filt('lowpass', 900, 0.8);
+  for(const [type, mul, amp] of [['triangle',1,1],['sine',2,0.25]]){
+    const o = ctx.createOscillator(), a = ctx.createGain(); o.type = type; a.gain.value = amp;
+    o.frequency.setValueAtTime(f*mul*1.012, t); o.frequency.exponentialRampToValueAtTime(f*mul, t+0.03);
+    o.connect(a); a.connect(lp); o.start(t); o.stop(t+len);
+  }
+  lp.connect(g); g.connect(bassBus);
+  const th = env(t, 0.12, 0.025), tf = filt('lowpass', 500); tf.connect(th); th.connect(bassBus); noise(t, 0.04, tf);
+}
+function brass(midis, t, dur, acc){
+  const g = ctx.createGain(), end = t + dur;
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(acc, t+0.018);
+  g.gain.setTargetAtTime(acc*0.7, t+0.03, 0.08); g.gain.setValueAtTime(acc*0.7, end); g.gain.exponentialRampToValueAtTime(0.0001, end+0.09);
+  const lp = filt('lowpass', 500, 2.5);
+  lp.frequency.setValueAtTime(500, t); lp.frequency.exponentialRampToValueAtTime(900 + 3800*acc, t+0.035);
+  lp.frequency.setTargetAtTime(1500, t+0.05, 0.15);
+  lp.connect(g); g.connect(hornBus);
+  for(const m of midis) for(const c of [-7, 6]){
+    const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = mtof(m);
+    o.detune.setValueAtTime(c - 70, t); o.detune.linearRampToValueAtTime(c, t+0.05);
+    o.connect(lp); o.start(t); o.stop(end+0.12);
+  }
+}
+
+function playStep(s, time, stepLen, beatDur){
+  const k = ((s%SPB)+SPB)%SPB, onBeat = s%2 === 0, beat = Math.floor(k/2);
+  const ev = {time, step:s, beat:onBeat ? beat : -1, hit:0, kick:false, fill:false, crash:false};
+  const heat = clamp(val('drums', s) || 0, 0, 1);
+  const prevHeat = clamp(val('drums', s-1) || 0, 0, 1);
+  const drums = !muted.drums;
+
+  // horns
+  const h = val('hits', s);
+  if(!muted.hits && Number.isFinite(h) && h > 0){
+    let d = muted.horn ? 0 : Math.round(val('horn', s));
+    if(!Number.isFinite(d)) d = 0;
+    d = clamp(d, -7, 9);
+    const dur = h >= 1 ? Math.floor(h)*stepLen*0.95 : beatDur*0.2;
+    brass([0,2,4,6].map(o => degToMidi(60, d+o)), time, dur, Math.min(1, 0.55 + 0.2*h));
+    ev.hit = h;
+    if(drums){ kick(time, 0.75); ev.kick = true; if(h >= 2){ crash(time); ev.crash = true; } }
+  }
+  // walking bass
+  if(onBeat && !muted.bass){
+    const d = Math.round(val('bass', s));
+    if(Number.isFinite(d)) bassPluck(degToMidi(36, clamp(d, -3, 14)), time, beatDur*0.98);
+  }
+  // drums
+  if(drums){
+    if(onBeat){ ride(time, beat%2 ? 0.75 : 1); kick(time, 0.12); if(beat%2) chick(time); }
+    else if(beat%2) ride(time, 0.6);
+    if(heat > 0.8){
+      ev.fill = true;
+      const r1 = rnd(s*1.31), r2 = rnd(s*2.17);
+      if(r1 > 0.55) tom(time, 0.7 + 0.3*heat, [196,147,110][Math.floor(r2*3)]); else snare(time, 0.55 + 0.4*r1);
+      snare(time + stepLen/2, 0.3 + 0.4*r2);
+      if(r2 > 0.8){ kick(time, 0.7); ev.kick = true; }
+    } else if(rnd(s*1.37 + 0.5) < heat*0.42){
+      snare(time, rnd(s*3.1) > 0.75 ? 0.75 : 0.2);
+    }
+    if(k === 0 && prevHeat > 0.8 && heat <= 0.8){ crash(time); kick(time, 0.9); ev.crash = ev.kick = true; }
+  }
+  events.push(ev);
+}
+function scheduler(){
+  while(nextBeat < ctx.currentTime + 0.15){
+    const beatDur = 60/bpm, s0 = beatIdx*2;
+    if(rushing && s0 % SPB === 0 && s0 > 0 && bpm < 330){ setBpm(bpm + 2); }
+    const bd = 60/bpm;
+    playStep(s0, nextBeat, swing*bd, bd);
+    playStep(s0+1, nextBeat + swing*bd, (1-swing)*bd, bd);
+    nextBeat += bd; beatIdx++;
+  }
+}
+
+const playBtn = $('play'), playIcon = $('playIcon');
+function togglePlay(){
+  if(!ctx) initAudio();
+  ctx.resume();
+  playing = !playing;
+  master.gain.cancelScheduledValues(ctx.currentTime);
+  if(playing){
+    master.gain.setTargetAtTime(volume, ctx.currentTime, 0.02);
+    beatIdx = 0; nextBeat = ctx.currentTime + 0.08; events.length = 0;
+    scheduler(); timer = setInterval(scheduler, 25);
+    playIcon.innerHTML = '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'; playBtn.setAttribute('aria-label', '停止');
+  } else {
+    clearInterval(timer); events.length = 0;
+    master.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
+    playIcon.innerHTML = '<path d="M7 4.5v15l13-7.5z"/>'; playBtn.setAttribute('aria-label', '再生');
+  }
+}
+playBtn.addEventListener('click', togglePlay);
+document.addEventListener('keydown', e => {
+  if(e.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)){ e.preventDefault(); togglePlay(); }
+});
+
+/* ---------- graphs ---------- */
+let curStep = 0, graphsDirty = true;
+const DPR = () => Math.min(2, window.devicePixelRatio || 1);
+const ro = new ResizeObserver(() => {
+  for(const c of Object.values(cards)){ const r = c.canvas.getBoundingClientRect(); c.canvas.width = Math.max(1, r.width*DPR()); c.canvas.height = Math.max(1, r.height*DPR()); }
+  graphsDirty = true;
+});
+for(const c of Object.values(cards)) ro.observe(c.canvas);
+
+function drawGraph(c){
+  const {tr, canvas} = c, g = canvas.getContext('2d'), W = canvas.width, H = canvas.height, px = DPR();
+  g.clearRect(0,0,W,H);
+  const span = SPB*tr.bars, start = Math.floor(curStep/span)*span;
+  const N = Math.min(span*4, 512), xs = [], vs = [];
+  for(let i=0;i<=N;i++){ const t = start + span*i/N; xs.push(t); vs.push(val(tr.id, t)); }
+  let lo, hi;
+  if(tr.fixed) [lo,hi] = tr.fixed;
+  else {
+    const steps = []; for(let s=start; s<start+span; s++) steps.push(val(tr.id, s));
+    const f = vs.concat(steps).filter(Number.isFinite);
+    lo = f.length ? Math.min(...f) : -1; hi = f.length ? Math.max(...f) : 1;
+    if(tr.stems) lo = Math.min(lo, 0);
+    if(hi - lo < 1e-6){ lo -= 1; hi += 1; }
+    const pad = (hi-lo)*0.12; lo -= tr.stems ? 0 : pad; hi += pad;
+  }
+  const pl = 4*px, pr = 4*px, pt = 10*px, pb = 10*px;
+  const X = t => pl + (t-start)/span*(W-pl-pr);
+  const Y = v => pt + (1-(clamp(v,lo,hi)-lo)/(hi-lo))*(H-pt-pb);
+
+  for(let s=start; s<=start+span; s+=2){
+    const bar = s%SPB === 0;
+    if(!bar && tr.bars > 4) continue;
+    g.strokeStyle = bar ? 'rgba(239,232,216,.16)' : 'rgba(239,232,216,.05)';
+    g.lineWidth = px; g.beginPath(); g.moveTo(X(s), 0); g.lineTo(X(s), H); g.stroke();
+  }
+  if(tr.id === 'drums'){
+    g.strokeStyle = 'rgba(210,65,44,.5)'; g.setLineDash([2*px,4*px]); g.beginPath(); g.moveTo(pl, Y(0.8)); g.lineTo(W-pr, Y(0.8)); g.stroke(); g.setLineDash([]);
+    g.font = `${10*px}px "JetBrains Mono", monospace`; g.fillStyle = c.color; g.fillText('SOLO', W-pr-32*px, Y(0.8)-4*px);
+  }
+
+  if(tr.stems){
+    // lollipops: each eighth that fires
+    for(let s=start; s<start+span; s++){
+      const v = val(tr.id, s); if(!(v > 0)) continue;
+      const x = X(s), y = Y(v);
+      g.strokeStyle = c.color; g.lineWidth = 1.5*px; g.beginPath(); g.moveTo(x, Y(0)); g.lineTo(x, y); g.stroke();
+      g.fillStyle = c.color; g.beginPath(); g.arc(x, y, 3*px, 0, Math.PI*2); g.fill();
+    }
+    g.strokeStyle = 'rgba(239,232,216,.25)'; g.lineWidth = px; g.beginPath(); g.moveTo(pl, Y(0)); g.lineTo(W-pr, Y(0)); g.stroke();
+  } else {
+    g.beginPath(); let pen = false;
+    for(let i=0;i<=N;i++){
+      const v = vs[i]; if(!Number.isFinite(v)){ pen = false; continue; }
+      const x = X(xs[i]), y = Y(v); pen ? g.lineTo(x,y) : g.moveTo(x,y); pen = true;
+    }
+    g.strokeStyle = c.color; g.lineWidth = 1.4*px; g.globalAlpha = 0.55; g.stroke(); g.globalAlpha = 1;
+    // the notes that actually sound
+    g.fillStyle = c.color;
+    for(let s=start; s<start+span; s++){
+      if(tr.id === 'bass' && s%2) continue;
+      if(tr.id === 'horn' && !(val('hits', s) > 0)) continue;
+      if(tr.id === 'drums') break;
+      const v = Math.round(val(tr.id, s)); if(!Number.isFinite(v)) continue;
+      g.fillRect(X(s), Y(v) - 1.5*px, Math.max(2*px, X(s+(tr.id==='bass'?2:1)) - X(s) - 2*px), 3*px);
+    }
+  }
+  // playhead
+  const hx = X(curStep);
+  g.strokeStyle = 'rgba(242,179,50,.9)'; g.lineWidth = 1.5*px; g.beginPath(); g.moveTo(hx, 0); g.lineTo(hx, H); g.stroke();
+  g.font = `${10*px}px "JetBrains Mono", monospace`; g.fillStyle = 'rgba(143,135,122,.9)';
+  const fmt = v => Math.abs(v) >= 100 ? v.toFixed(0) : +v.toFixed(2);
+  g.fillText(fmt(hi), pl+2*px, pt); g.fillText(fmt(lo), pl+2*px, H-2*px);
+}
+
+function updateReadouts(){
+  const s = curStep;
+  const h = val('hits', s);
+  let d = Math.round(val('horn', s)); if(!Number.isFinite(d)) d = 0; d = clamp(d, -7, 9);
+  cards.horn.readout.textContent = NAMES[degToMidi(60, d)%12] + SEVENTH[((d%7)+7)%7];
+  cards.hits.readout.textContent = !(h > 0) ? '休み' : h >= 2 ? 'キメ！' : h >= 1 ? `ロング ×${Math.floor(h)}` : 'スタブ';
+  const bv = Math.round(val('bass', s - (s%2)));
+  cards.bass.readout.textContent = Number.isFinite(bv) ? midiName(degToMidi(36, clamp(bv, -3, 14))) : '—';
+  const heat = clamp(val('drums', s) || 0, 0, 1);
+  cards.drums.readout.textContent = heat > 0.8 ? 'SOLO' : Math.round(heat*100) + '%';
+}
+
+/* ---------- the stage: spotlight + one cube ---------- */
+const bg = $('bg'), bx = bg.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+const V = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+const FACES = [[0,1,2,3],[4,7,6,5],[0,4,5,1],[3,2,6,7],[0,3,7,4],[1,5,6,2]];
+const EDGES = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+let rotY = 0.6, rotTarget = 0.6, rotX = 0.5, pulse = 0, flash = 0, shake = 0, lastPhase = 0;
+const sweat = [];
+
+function resizeBg(){ const k = DPR(); bg.width = innerWidth*k; bg.height = innerHeight*k; }
+addEventListener('resize', resizeBg); resizeBg();
+
+function drawStage(dt){
+  const W = bg.width, H = bg.height, k = DPR(), m = Math.min(W, H), rm = reduce.matches;
+  bx.fillStyle = '#0c0b09'; bx.fillRect(0,0,W,H);
+  const cx = W/2, cy = H*0.55;
+  const size = m*0.16*(1 + (rm ? 0.05 : 0.2)*pulse);
+  const light = 0.05 + 0.12*pulse + 0.25*flash;
+
+  // spotlight cone from the rig
+  const top = 0, floorY = cy + size*1.9;
+  const cone = bx.createLinearGradient(0, top, 0, floorY);
+  cone.addColorStop(0, `rgba(242,200,120,${light*1.4})`); cone.addColorStop(1, `rgba(242,200,120,${light*0.3})`);
+  bx.fillStyle = cone; bx.beginPath();
+  bx.moveTo(cx - m*0.04, top); bx.lineTo(cx + m*0.04, top); bx.lineTo(cx + size*2.3, floorY); bx.lineTo(cx - size*2.3, floorY); bx.closePath(); bx.fill();
+  const pool = bx.createRadialGradient(cx, floorY, 0, cx, floorY, size*2.4);
+  pool.addColorStop(0, `rgba(242,200,120,${light*1.6})`); pool.addColorStop(1, 'rgba(242,200,120,0)');
+  bx.save(); bx.translate(cx, floorY); bx.scale(1, 0.18); bx.translate(-cx, -floorY);
+  bx.fillStyle = pool; bx.beginPath(); bx.arc(cx, floorY, size*2.4, 0, Math.PI*2); bx.fill(); bx.restore();
+
+  // cube: turns in clicks, one notch per beat
+  rotY += (rotTarget - rotY)*Math.min(1, dt*16);
+  const sx = rm ? 0 : (Math.random()-0.5)*shake*m*0.02, sy = rm ? 0 : (Math.random()-0.5)*shake*m*0.02;
+  const ca = Math.cos(rotX), sa = Math.sin(rotX), cb = Math.cos(rotY), sb = Math.sin(rotY);
+  const P = V.map(([x,y,z]) => {
+    const x1 = x*cb + z*sb, z1 = -x*sb + z*cb;
+    const y2 = y*ca - z1*sa, z2 = y*sa + z1*ca;
+    const p = size*3.6/(z2+3.6);
+    return {x:cx + sx + x1*p, y:cy + sy + y2*p, z:z2};
+  });
+  const faces = FACES.map(f => ({f, z:f.reduce((a,i) => a + P[i].z, 0)/4})).sort((a,b) => b.z - a.z);
+  for(const {f, z} of faces){
+    bx.beginPath(); f.forEach((i,n) => n ? bx.lineTo(P[i].x, P[i].y) : bx.moveTo(P[i].x, P[i].y)); bx.closePath();
+    bx.fillStyle = `rgba(242,179,50,${flash*0.55*(1-z)/2 + 0.02})`; bx.fill();
+  }
+  bx.save();
+  bx.lineJoin = 'round'; bx.lineWidth = (1.3 + 1.2*flash)*k;
+  bx.shadowColor = 'rgba(242,179,50,.9)'; bx.shadowBlur = 18*flash*k;
+  bx.strokeStyle = flash > 0.05 ? `rgba(242,${179+60*(1-flash)},${50+170*(1-flash)},1)` : 'rgba(239,232,216,.85)';
+  bx.beginPath(); for(const [a,b] of EDGES){ bx.moveTo(P[a].x, P[a].y); bx.lineTo(P[b].x, P[b].y); } bx.stroke();
+  bx.restore();
+
+  // sweat: drops that fly off when the tempo climbs
+  for(let i=sweat.length-1; i>=0; i--){
+    const d = sweat[i]; d.vy += dt*m*1.6; d.x += d.vx*dt; d.y += d.vy*dt; d.a -= dt*0.9;
+    if(d.a <= 0 || d.y > H){ sweat.splice(i,1); continue; }
+    bx.fillStyle = `rgba(239,232,216,${d.a*0.8})`; bx.beginPath(); bx.ellipse(d.x, d.y, 1.6*k, 3*k, Math.atan2(d.vy, d.vx) - Math.PI/2, 0, Math.PI*2); bx.fill();
+  }
+  return {cx, cy, size};
+}
+function spray(n){
+  if(reduce.matches) return;
+  const W = bg.width, H = bg.height, m = Math.min(W,H), cx = W/2, cy = H*0.55, size = m*0.16;
+  for(let i=0;i<n;i++){
+    const a = -Math.PI/2 + (Math.random()-0.5)*2.4;
+    sweat.push({x:cx + Math.cos(a)*size, y:cy + Math.sin(a)*size, vx:Math.cos(a)*m*(0.3+Math.random()*0.4), vy:Math.sin(a)*m*(0.3+Math.random()*0.5), a:1});
+  }
+}
+
+// idle lub-dub before the count-in
+function idleBeat(sec){
+  const p = sec % 1.0;
+  if(p < lastPhase) rotTarget += Math.PI/8;
+  lastPhase = p;
+  return Math.exp(-p*12) + (p > 0.22 ? 0.65*Math.exp(-(p-0.22)*12) : 0);
+}
+
+let last = performance.now();
+const beatDots = () => beatsEl.querySelectorAll('i');
+function frame(now){
+  const dt = Math.min(0.05, (now - last)/1000); last = now;
+  if(playing && ctx){
+    const at = ctx.currentTime;
+    while(events.length && events[0].time <= at){
+      const e = events.shift();
+      if(e.step !== curStep){ curStep = e.step; graphsDirty = true; updateReadouts(); }
+      if(e.beat >= 0){
+        rotTarget += Math.PI/2/sig; pulse = Math.max(pulse, 0.45);
+        beatDots().forEach((d,i) => d.classList.toggle('on', i === e.beat));
+        if(bpm >= 280 && Math.random() < (bpm-270)/120) spray(2);
+      }
+      if(e.kick) pulse = 1;
+      if(e.hit > 0) flash = Math.min(1, 0.55 + 0.25*e.hit);
+      if(e.crash){ flash = 1; spray(bpm >= 250 ? 8 : 3); }
+      if(e.fill) shake = 1;
+    }
+    pulse *= Math.exp(-dt*9); flash *= Math.exp(-dt*5); shake *= Math.exp(-dt*10);
+  } else {
+    pulse = idleBeat(now/1000); flash *= Math.exp(-dt*5); shake = 0;
+  }
+  drawStage(dt);
+  if(graphsDirty){ for(const c of Object.values(cards)) drawGraph(c); graphsDirty = false; }
+  requestAnimationFrame(frame);
+}
+
+loadPreset('seven');
+updateReadouts();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

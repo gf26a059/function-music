@@ -1,0 +1,785 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>氷チル</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;500;700;900&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: a snowy night (aurora, ice cube, glowing kamakura) fills the screen; hero = rounded title beside the live chord name, then frosted cards with the four graphs */
+:root{
+  --ink:#0a1624;
+  --panel:rgba(214,234,248,.075);
+  --line:rgba(214,234,248,.16);
+  --fg:#eef6fb;
+  --muted:#8fa7ba;
+  --ice:#a8e4ff;
+  --frost:#dff3ff;
+  --ember:#ffb36b;
+  --holly:#ef7a7a;
+  --pine:#86d0ad;
+  --round:"Zen Maru Gothic","Hiragino Maru Gothic ProN","Yu Gothic",system-ui,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--ink);color:var(--fg);font-family:var(--round);font-size:15px;line-height:1.7}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding-inline:16px;padding-block:40px 64px;display:flex;flex-direction:column;gap:24px}
+
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:20px 40px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.3em;color:var(--ice);margin:0 0 10px;text-transform:uppercase}
+h1{font-weight:900;font-size:clamp(48px,9vw,96px);line-height:1;margin:0;letter-spacing:.06em;
+  background:linear-gradient(180deg,#ffffff 10%,var(--ice) 60%,#6fb7da 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 18px rgba(168,228,255,.25))}
+.sub{margin:14px 0 0;color:var(--muted);max-width:36ch;font-size:14.5px}
+.now{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
+.now span{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--muted);text-transform:uppercase}
+.chord-big{font-weight:700;font-size:clamp(36px,6vw,64px);line-height:1.05;color:var(--frost);letter-spacing:.02em;transition:opacity .6s;font-variant-numeric:tabular-nums}
+
+.console{display:flex;flex-wrap:wrap;align-items:center;gap:16px 28px;padding:16px 20px;background:var(--panel);border:1px solid var(--line);border-radius:24px;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+.play{width:52px;height:52px;border-radius:50%;border:1px solid rgba(168,228,255,.55);background:rgba(168,228,255,.1);color:var(--ice);cursor:pointer;display:grid;place-items:center;flex:none;transition:background .3s}
+.play:hover{background:rgba(168,228,255,.22)}
+.play svg{width:18px;height:18px;fill:currentColor}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--ice);outline-offset:2px}
+.ctl{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0;letter-spacing:.06em}
+.ctl .row{display:flex;align-items:center;gap:10px}
+.ctl output{font-family:var(--mono);color:var(--fg);font-size:12px;min-width:4ch;font-variant-numeric:tabular-nums}
+input[type=range]{accent-color:var(--ice);width:120px}
+select{background:rgba(10,22,36,.6);color:var(--fg);border:1px solid var(--line);border-radius:12px;padding:6px 10px;font-family:var(--round);font-size:14px}
+.toggle{background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:7px 16px;font-family:var(--round);font-size:13px;cursor:pointer}
+.toggle[aria-pressed="true"]{color:var(--ember);border-color:rgba(255,179,107,.6);background:rgba(255,179,107,.08)}
+
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+@media (max-width:780px){.grid{grid-template-columns:1fr}.now{align-items:flex-start}}
+.card{--track:var(--ice);background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:10px;min-width:0;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);transition:opacity .4s}
+.card.is-muted{opacity:.4}
+.card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.card h2{margin:0;font-size:16px;font-weight:700;letter-spacing:.06em}
+.card .desc{margin:2px 0 0;color:var(--muted);font-size:12.5px;line-height:1.6}
+.readout{font-family:var(--mono);font-size:12.5px;color:var(--track);white-space:nowrap;font-variant-numeric:tabular-nums}
+.expr{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:13.5px;min-width:0}
+.expr label{color:var(--track);white-space:nowrap}
+.formula{flex:1;min-width:0;background:rgba(10,22,36,.45);border:1px solid var(--line);border-radius:12px;color:var(--fg);font-family:var(--mono);font-size:13.5px;padding:8px 10px}
+.formula:focus{border-color:var(--track);outline:none}
+.formula.bad{border-color:var(--holly)}
+.err{font-family:var(--mono);font-size:12px;color:var(--holly);min-height:1.2em;margin-top:-6px}
+canvas.graph{width:100%;height:130px;display:block}
+.card-foot{display:flex;justify-content:flex-end}
+.mute{background:transparent;border:0;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--round);letter-spacing:.06em}
+.mute[aria-pressed="true"]{color:var(--holly)}
+
+.help{color:var(--muted);font-size:13.5px;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px 36px}
+.help p{margin:0;max-width:60ch}
+.help code{font-family:var(--mono);color:var(--fg);font-size:12.5px}
+.help b{color:var(--fg);font-weight:700}
+</style>
+
+<style>
+.sitenav{position:relative;z-index:10;display:flex;align-items:center;gap:4px;overflow-x:auto;padding:10px 16px;
+  background:rgba(0,0,0,.38);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08);
+  font:13px/1.4 system-ui,"Hiragino Sans","Yu Gothic",sans-serif;scrollbar-width:none}
+.sitenav::-webkit-scrollbar{display:none}
+.sitenav a{color:rgba(255,255,255,.62);text-decoration:none;padding:5px 11px;border-radius:999px;white-space:nowrap}
+.sitenav a:hover{color:#fff;background:rgba(255,255,255,.08)}
+.sitenav a[aria-current="page"]{color:#fff;background:rgba(255,255,255,.14)}
+.sitenav a:focus-visible{outline:2px solid #fff;outline-offset:1px}
+.sitenav .home{font-weight:700;color:#fff;margin-right:8px}
+</style>
+</head>
+<body>
+<nav class="sitenav" aria-label="部屋の切り替え"><a class="home" href="index.html">関数ミュージック</a><a href="trance.html">トランス</a><a href="bigband.html">ビッグバンド</a><a href="whip.html">ウィップ</a><a href="rain.html">雨音</a><a href="ice.html" aria-current="page">氷チル</a><a href="deep.html">深海</a></nav>
+<canvas id="bg" aria-hidden="true"></canvas>
+
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">f(t) · ice chill · D major</p>
+      <h1>氷チル</h1>
+      <p class="sub">冷たいピアノと鉄琴が、雪の夜にぽつぽつ光る。かまくらの灯りと、遠くの鈴の音。</p>
+    </div>
+    <div class="now"><span>now</span><div class="chord-big" id="chordBig">Gmaj7</div></div>
+  </header>
+
+  <section class="console" aria-label="再生コントロール">
+    <button class="play" id="play" aria-label="再生"><svg viewBox="0 0 24 24" id="playIcon"><path d="M7 4.5v15l13-7.5z"/></svg></button>
+    <div class="ctl"><label for="bpm">テンポ</label>
+      <div class="row"><input type="range" id="bpm" min="56" max="96" value="76"><output id="bpmOut">76</output></div></div>
+    <div class="ctl"><label for="chill">冷たさ</label>
+      <div class="row"><input type="range" id="chill" min="0" max="100" value="60"><output id="chillOut">60</output></div></div>
+    <div class="ctl"><label for="preset">情景</label><select id="preset"></select></div>
+    <div class="ctl"><label for="vol">音量</label>
+      <div class="row"><input type="range" id="vol" min="0" max="100" value="75"><output id="volOut">75</output></div></div>
+    <button class="toggle" id="beat" aria-pressed="true">やわらかいビート</button>
+  </section>
+
+  <section class="grid" id="grid" aria-label="関数トラック"></section>
+
+  <section class="help">
+    <p><b>変数</b>　<code>t</code> = 8分音符のステップ、<code>b</code> = 拍（t/2）、<code>bar</code> = 小節、<code>k</code> = 小節内の位置（0〜7）。</p>
+    <p><b>関数</b>　<code>sin cos abs floor round min max PI</code> などに加えて <code>fract tri saw sq clamp rand</code>。比較は真で1、<code>%</code> は常に正、配列 <code>[3,2,1,0][bar]</code> も使えます。</p>
+    <p><b>音</b>　キーは D メジャー。和音は度数（0=D, 1=Em, 3=G, 4=A, 5=Bm）で、9thまで積んだ冷たい響き。「冷たさ」を上げると残響が長く澄んでいきます。雪が0.55を超えると鈴が混ざり始めます。スペースキーで再生／停止。</p>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- expression parser (no eval) ---------- */
+const fract = x => x - Math.floor(x);
+const FUNCS = {
+  sin:Math.sin, cos:Math.cos, tan:Math.tan, atan:Math.atan, atan2:Math.atan2,
+  abs:Math.abs, floor:Math.floor, ceil:Math.ceil, round:Math.round, sqrt:Math.sqrt, exp:Math.exp, log:Math.log,
+  min:Math.min, max:Math.max, pow:Math.pow, sign:Math.sign, hypot:Math.hypot, trunc:Math.trunc,
+  fract, tri:x => 4*Math.abs(fract(x)-0.5)-1, saw:x => 2*fract(x)-1, sq:x => fract(x)<0.5 ? 1 : -1,
+  clamp:(x,a,b) => Math.min(Math.max(x,a),b), rand:x => fract(Math.sin(x*12.9898+78.233)*43758.5453),
+  mod:(a,n) => ((a%n)+n)%n
+};
+const CONSTS = {PI:Math.PI, E:Math.E, TAU:Math.PI*2, pi:Math.PI};
+const VARS = {t:1, b:1, bar:1, k:1};
+const OPS = {
+  '||':(a,b)=>(a||b)?1:0, '&&':(a,b)=>(a&&b)?1:0,
+  '<':(a,b)=>+(a<b), '>':(a,b)=>+(a>b), '<=':(a,b)=>+(a<=b), '>=':(a,b)=>+(a>=b), '==':(a,b)=>+(a===b), '!=':(a,b)=>+(a!==b),
+  '+':(a,b)=>a+b, '-':(a,b)=>a-b, '*':(a,b)=>a*b, '/':(a,b)=>a/b, '%':(a,b)=>((a%b)+b)%b
+};
+const LEVELS = [['||'],['&&'],['<','>','<=','>=','==','!='],['+','-'],['*','/','%']];
+const SPB = 8;
+
+function compile(src){
+  src = src.trim();
+  if(!src) throw Error('式が空です');
+  const re = /\s*(?:(\d+\.?\d*(?:e[+-]?\d+)?|\.\d+)|([A-Za-z_]\w*)|(\*\*|<=|>=|==|!=|&&|\|\||[-+*\/%^()<>?:,!\[\]]))/y;
+  const toks = [];
+  while(re.lastIndex < src.length){
+    const at = re.lastIndex, m = re.exec(src);
+    if(!m) throw Error('「' + src.slice(at).trim()[0] + '」は使えません');
+    toks.push(m[1]!=null ? {k:'n', v:parseFloat(m[1])} : m[2]!=null ? {k:'id', v:m[2]} : {k:'op', v:m[3]});
+  }
+  let i = 0;
+  const isOp = v => toks[i] && toks[i].k==='op' && toks[i].v===v;
+  const eat = v => { if(!isOp(v)) throw Error('「' + v + '」が足りません'); i++; };
+  function ternary(){
+    const c = level(0);
+    if(isOp('?')){ i++; const a = ternary(); eat(':'); const b = ternary(); return e => c(e) ? a(e) : b(e); }
+    return c;
+  }
+  function level(n){
+    if(n === LEVELS.length) return unary();
+    let l = level(n+1);
+    while(toks[i] && toks[i].k==='op' && LEVELS[n].includes(toks[i].v)){
+      const f = OPS[toks[i++].v], L = l, R = level(n+1);
+      l = e => f(L(e), R(e));
+    }
+    return l;
+  }
+  function unary(){
+    if(isOp('-')){ i++; const a = unary(); return e => -a(e); }
+    if(isOp('+')){ i++; return unary(); }
+    if(isOp('!')){ i++; const a = unary(); return e => +!a(e); }
+    return power();
+  }
+  function power(){
+    const a = postfix();
+    if(isOp('^') || isOp('**')){ i++; const b = unary(); return e => Math.pow(a(e), b(e)); }
+    return a;
+  }
+  function list(close){
+    const items = [];
+    if(!isOp(close)){ items.push(ternary()); while(isOp(',')){ i++; items.push(ternary()); } }
+    eat(close);
+    return items;
+  }
+  function postfix(){
+    let a = primary();
+    while(isOp('[')){
+      i++; const idx = ternary(); eat(']'); const A = a;
+      a = e => { const arr = A(e); if(!Array.isArray(arr) || !arr.length) return NaN; const n = arr.length; return arr[((Math.floor(idx(e))%n)+n)%n]; };
+    }
+    return a;
+  }
+  function primary(){
+    const tk = toks[i];
+    if(!tk) throw Error('式が途中で終わっています');
+    if(tk.k==='n'){ i++; const v = tk.v; return () => v; }
+    if(tk.k==='id'){
+      i++; const name = tk.v;
+      if(isOp('(')){
+        i++; const args = list(')'); const f = FUNCS[name];
+        if(!f) throw Error('関数 ' + name + '() はありません');
+        return e => f(...args.map(a => a(e)));
+      }
+      if(VARS[name]) return e => e[name];
+      if(name in CONSTS){ const v = CONSTS[name]; return () => v; }
+      throw Error('変数 ' + name + ' はありません');
+    }
+    if(isOp('(')){ i++; const a = ternary(); eat(')'); return a; }
+    if(isOp('[')){ i++; const items = list(']'); return e => items.map(x => x(e)); }
+    throw Error('「' + tk.v + '」の位置が読めません');
+  }
+  const root = ternary();
+  if(i < toks.length) throw Error('「' + toks[i].v + '」以降が読めません');
+  const env = {t:0, b:0, bar:0, k:0};
+  const fn = t => {
+    env.t = t; env.b = t/2; env.bar = Math.floor(t/SPB); env.k = ((t%SPB)+SPB)%SPB;
+    const v = root(env); return typeof v === 'number' ? v : NaN;
+  };
+  fn(0); fn(37.5);
+  return fn;
+}
+
+/* ---------- theory: D major ---------- */
+const SCALE = [0,2,4,5,7,9,11];
+const QUALITY = ['maj7','m7','m7','maj7','7','m7','m7♭5'];
+const NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const degToMidi = (base, d) => base + 12*Math.floor(d/7) + SCALE[((d%7)+7)%7];
+const midiName = m => NAMES[((m%12)+12)%12] + (Math.floor(m/12)-1);
+const mtof = m => 440*Math.pow(2,(m-69)/12);
+const clamp = (x,a,b) => Math.min(Math.max(x,a),b);
+const chordName = d => NAMES[degToMidi(62, d)%12] + QUALITY[((d%7)+7)%7];
+
+/* ---------- tracks & presets ---------- */
+const TRACKS = [
+  {id:'chord', fn:'c(t)', name:'冷たいピアノの和音', color:'--frost', bars:16,
+   desc:'小節の頭で評価。D メジャーの度数に、9thまで積んだ和音をそっと崩して弾く。'},
+  {id:'glock', fn:'g(t)', name:'鉄琴の音', color:'--ice', bars:4,
+   desc:'鳴らす音の高さ（度数）。0が D5、7で1オクターブ上。'},
+  {id:'hit', fn:'v(t)', name:'鉄琴のリズム', color:'--pine', bars:4, stems:true, fixed:[0,1],
+   desc:'0より大きい所で叩く。値がそのまま強さ。'},
+  {id:'snow', fn:'s(t)', name:'雪と鈴', color:'--holly', bars:32, fixed:[0,1],
+   desc:'雪の量と風の音。0.55を超えると、遠くでそりの鈴が鳴り出す。'}
+];
+const PRESETS = {
+  kamakura:{name:'かまくらの夜', bpm:76,
+    chord:'[3,2,1,0][bar]',
+    glock:'[4,6,7,9,8,6][floor(t/3)] + 2*(bar%4==3)',
+    hit:'(t%3==0) * (0.45 + 0.35*rand(t))',
+    snow:'0.5 + 0.3*sin(bar*PI/8)'},
+  crystal:{name:'氷の結晶', bpm:70,
+    chord:'[0,5,3,4][floor(4*fract(bar*0.618))]',
+    glock:'round(7 + 5*sin(t*PI/7))',
+    hit:'(rand(t) > 0.6) * 0.6',
+    snow:'0.3 + 0.6*fract(bar/8)'},
+  holy:{name:'聖夜', bpm:80,
+    chord:'[0,5,1,4][bar]',
+    glock:'[7,6,4,2,4,7,9,7][t]',
+    hit:'(k%2==0)*0.55 + (k==7)*0.3',
+    snow:'0.85'},
+  hush:{name:'しんしん', bpm:64,
+    chord:'[0,3][floor(bar/2)]',
+    glock:'[9,11,7][floor(t/5)]',
+    hit:'0.5*(t%5==0)',
+    snow:'0.35'}
+};
+
+const state = {}, muted = {chord:false, glock:false, hit:false, snow:false}, cards = {};
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const grid = document.getElementById('grid');
+for(const tr of TRACKS){
+  const el = document.createElement('article');
+  el.className = 'card';
+  el.style.setProperty('--track', `var(${tr.color})`);
+  el.innerHTML = `
+    <div class="card-head">
+      <div><h2>${tr.name}</h2><p class="desc">${tr.desc}</p></div>
+      <span class="readout">—</span>
+    </div>
+    <div class="expr"><label for="fx-${tr.id}">${tr.fn} =</label><input class="formula" id="fx-${tr.id}" spellcheck="false" autocomplete="off"></div>
+    <div class="err"></div>
+    <canvas class="graph" aria-label="${tr.name}のグラフ"></canvas>
+    <div class="card-foot"><button class="mute" id="mute-${tr.id}" aria-pressed="false">${tr.id==='snow' ? '雪を止める' : 'ミュート'}</button></div>`;
+  grid.appendChild(el);
+  const c = {tr, el, input:el.querySelector('.formula'), err:el.querySelector('.err'), canvas:el.querySelector('canvas'), readout:el.querySelector('.readout'), color:css(tr.color)};
+  cards[tr.id] = c;
+  c.input.addEventListener('input', () => setExpr(tr.id, c.input.value));
+  el.querySelector('.mute').addEventListener('click', e => {
+    muted[tr.id] = !muted[tr.id];
+    e.currentTarget.setAttribute('aria-pressed', muted[tr.id]);
+    el.classList.toggle('is-muted', muted[tr.id]);
+  });
+}
+function setExpr(id, src){
+  const c = cards[id];
+  try { state[id] = compile(src); c.input.classList.remove('bad'); c.err.textContent = ''; }
+  catch(e){ c.input.classList.add('bad'); c.err.textContent = e.message; }
+  graphsDirty = true;
+}
+const val = (id, t) => { try { return state[id] ? state[id](t) : NaN; } catch(e){ return NaN; } };
+const chordAt = s => { const c = Math.round(val('chord', Math.floor(s/SPB)*SPB)); return Number.isFinite(c) ? clamp(c, -3, 9) : 0; };
+const snowAt = s => muted.snow ? 0 : clamp(Number.isFinite(val('snow', s)) ? val('snow', s) : 0, 0, 1);
+
+/* ---------- controls ---------- */
+const $ = id => document.getElementById(id);
+let bpm = 76, volume = 0.75, chill = 0.6, beatOn = true;
+function setBpm(v){ bpm = +v; $('bpm').value = bpm; $('bpmOut').textContent = bpm; if(delay) delay.delayTime.setTargetAtTime(0.75*60/bpm, ctx.currentTime, 0.1); }
+$('bpm').addEventListener('input', e => setBpm(e.target.value));
+$('chill').addEventListener('input', e => { chill = e.target.value/100; $('chillOut').textContent = e.target.value; applyChill(); });
+$('vol').addEventListener('input', e => { volume = e.target.value/100; $('volOut').textContent = e.target.value; if(ctx && playing) master.gain.setTargetAtTime(volume, ctx.currentTime, 0.1); });
+const beatBtn = $('beat');
+beatBtn.addEventListener('click', () => { beatOn = !beatOn; beatBtn.setAttribute('aria-pressed', beatOn); });
+const presetSel = $('preset');
+for(const [k,p] of Object.entries(PRESETS)){ const o = document.createElement('option'); o.value = k; o.textContent = p.name; presetSel.appendChild(o); }
+function loadPreset(k){ const p = PRESETS[k]; setBpm(p.bpm); for(const tr of TRACKS){ cards[tr.id].input.value = p[tr.id]; setExpr(tr.id, p[tr.id]); } }
+presetSel.addEventListener('change', () => loadPreset(presetSel.value));
+
+/* ---------- audio ---------- */
+let ctx, master, dry, wet, verb, delay, windGain, windBp, noiseBuf, tone;
+let playing = false, step = 0, nextTime = 0, timer = null;
+const events = [];
+
+function impulse(sec, decay){
+  const len = Math.floor(ctx.sampleRate*sec), buf = ctx.createBuffer(2, len, ctx.sampleRate);
+  for(let ch=0; ch<2; ch++){ const d = buf.getChannelData(ch); for(let i=0;i<len;i++) d[i] = (Math.random()*2-1)*Math.pow(1-i/len, decay); }
+  return buf;
+}
+function initAudio(){
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  const comp = ctx.createDynamicsCompressor();
+  comp.threshold.value = -18; comp.ratio.value = 3; comp.attack.value = 0.01; comp.release.value = 0.3;
+  master = ctx.createGain(); master.gain.value = 0; master.connect(comp); comp.connect(ctx.destination);
+  tone = ctx.createBiquadFilter(); tone.type = 'lowpass'; tone.frequency.value = 9000; tone.Q.value = 0.4; tone.connect(master);
+  dry = ctx.createGain(); dry.connect(tone);
+  verb = ctx.createConvolver(); verb.buffer = impulse(5.5, 2.6);
+  wet = ctx.createGain(); verb.connect(wet); wet.connect(tone);
+  delay = ctx.createDelay(3); delay.delayTime.value = 0.75*60/bpm;
+  const fb = ctx.createGain(); fb.gain.value = 0.38; const dhp = ctx.createBiquadFilter(); dhp.type = 'highpass'; dhp.frequency.value = 900;
+  const dOut = ctx.createGain(); dOut.gain.value = 0.5;
+  delay.connect(dhp); dhp.connect(fb); fb.connect(delay); dhp.connect(dOut); dOut.connect(verb); dOut.connect(dry);
+  noiseBuf = ctx.createBuffer(1, ctx.sampleRate*3, ctx.sampleRate);
+  const d = noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i] = Math.random()*2-1;
+  // winter wind
+  const wind = ctx.createBufferSource(); wind.buffer = noiseBuf; wind.loop = true;
+  windBp = ctx.createBiquadFilter(); windBp.type = 'bandpass'; windBp.frequency.value = 500; windBp.Q.value = 0.8;
+  const lfo = ctx.createOscillator(), lfoAmt = ctx.createGain(); lfo.frequency.value = 0.06; lfoAmt.gain.value = 260;
+  lfo.connect(lfoAmt); lfoAmt.connect(windBp.frequency); lfo.start();
+  windGain = ctx.createGain(); windGain.gain.value = 0;
+  wind.connect(windBp); windBp.connect(windGain); windGain.connect(dry); wind.start();
+  applyChill();
+}
+function applyChill(){
+  if(!ctx) return;
+  const t = ctx.currentTime;
+  wet.gain.setTargetAtTime(0.35 + 0.9*chill, t, 0.3);
+  dry.gain.setTargetAtTime(1 - 0.3*chill, t, 0.3);
+  tone.frequency.setTargetAtTime(5000 + 9000*chill, t, 0.3);
+}
+const out = (node, d, v, dl) => { node.connect(dry); if(v){ const g = ctx.createGain(); g.gain.value = v; node.connect(g); g.connect(verb); } if(dl){ const g = ctx.createGain(); g.gain.value = dl; node.connect(g); g.connect(delay); } };
+
+// cold piano: slightly stretched partials, two strings per note, felt-soft hammer
+function piano(midi, t, vel, len){
+  const f = mtof(midi), o = ctx.createGain(), lp = ctx.createBiquadFilter();
+  o.gain.value = 0.075*vel;
+  lp.type = 'lowpass'; lp.frequency.setValueAtTime(2200 + 5000*vel, t); lp.frequency.setTargetAtTime(1400, t+0.05, 0.6);
+  lp.connect(o); out(o, 1, 0.7 + 0.4*chill, 0);
+  for(let n=1; n<=7; n++){
+    const fr = f*n*Math.sqrt(1 + 0.00035*n*n);
+    if(fr > 16000) break;
+    const amp = Math.pow(n, -1.35)*(n === 1 ? 1 : 0.6 + 0.6*vel), life = len*1.4/Math.pow(n, 0.65);
+    for(const det of n <= 2 ? [-1.6, 1.6] : [0]){
+      const osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.frequency.value = fr; osc.detune.value = det;
+      g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(amp, t+0.004); g.gain.exponentialRampToValueAtTime(0.0001, t+life);
+      osc.connect(g); g.connect(lp); osc.start(t); osc.stop(t+life+0.05);
+    }
+  }
+  const h = ctx.createGain(), hb = ctx.createBiquadFilter(); hb.type = 'bandpass'; hb.frequency.value = Math.min(9000, f*5); hb.Q.value = 1.2;
+  h.gain.setValueAtTime(0.0001, t); h.gain.linearRampToValueAtTime(0.25*vel, t+0.002); h.gain.exponentialRampToValueAtTime(0.0001, t+0.03);
+  noise(t, 0.04, hb); hb.connect(h); h.connect(lp);
+}
+// glockenspiel: free-bar modes (1 : 2.76 : 5.40 : 8.93)
+function glock(midi, t, vel){
+  const f = mtof(midi), o = ctx.createGain(); o.gain.value = 0.07*vel;
+  out(o, 1, 0.9, 0.3);
+  for(const [r, a, life] of [[1,1,1.9],[2.76,0.32,0.6],[5.4,0.12,0.22],[8.93,0.05,0.09]]){
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.frequency.value = f*r;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(a, t+0.0015); g.gain.exponentialRampToValueAtTime(0.0001, t+life*(0.7+0.6*chill));
+    osc.connect(g); g.connect(o); osc.start(t); osc.stop(t+life*1.4+0.05);
+  }
+}
+function subBass(midi, t, len){
+  const o = ctx.createOscillator(), g = ctx.createGain(); o.type = 'sine'; o.frequency.value = mtof(midi);
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.16, t+0.08); g.gain.setTargetAtTime(0.0001, t+len*0.7, len*0.2);
+  o.connect(g); g.connect(dry); o.start(t); o.stop(t+len*1.3);
+}
+function noise(t, dur, dest){ const s = ctx.createBufferSource(); s.buffer = noiseBuf; s.connect(dest); s.start(t, Math.random()*2); s.stop(t+dur); }
+function sleighBells(t, amt){
+  for(let i=0; i<4; i++){
+    const tt = t + i*0.014 + Math.random()*0.008;
+    const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 6500 + Math.random()*3000; bp.Q.value = 14;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, tt); g.gain.linearRampToValueAtTime(0.22*amt, tt+0.002); g.gain.exponentialRampToValueAtTime(0.0001, tt+0.09);
+    noise(tt, 0.1, bp); bp.connect(g); out(g, 1, 0.8, 0);
+    const p = ctx.createOscillator(), pg = ctx.createGain(); p.frequency.value = 5200 + Math.random()*2400;
+    pg.gain.setValueAtTime(0.0001, tt); pg.gain.linearRampToValueAtTime(0.01*amt, tt+0.002); pg.gain.exponentialRampToValueAtTime(0.0001, tt+0.14);
+    p.connect(pg); out(pg, 1, 0.6, 0); p.start(tt); p.stop(tt+0.16);
+  }
+}
+function kick(t){
+  const o = ctx.createOscillator(), g = ctx.createGain(), lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 400;
+  o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(46, t+0.1);
+  g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.42, t+0.006); g.gain.exponentialRampToValueAtTime(0.0001, t+0.32);
+  o.connect(lp); lp.connect(g); g.connect(dry); o.start(t); o.stop(t+0.35);
+}
+function brush(t){
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 2000; bp.Q.value = 0.5;
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.11, t+0.012); g.gain.exponentialRampToValueAtTime(0.0001, t+0.2);
+  noise(t, 0.22, bp); bp.connect(g); out(g, 1, 0.25, 0);
+}
+function hat(t, v){
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 7500;
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(v, t+0.002); g.gain.exponentialRampToValueAtTime(0.0001, t+0.035);
+  noise(t, 0.05, hp); hp.connect(g); g.connect(dry);
+}
+function crackle(t){
+  const hp = ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800 + Math.random()*2000;
+  const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.02 + Math.random()*0.03, t+0.001); g.gain.exponentialRampToValueAtTime(0.0001, t+0.012);
+  noise(t, 0.02, hp); hp.connect(g); g.connect(dry);
+}
+
+let lastChord = null;
+function playStep(s, time){
+  const stepLen = 30/bpm, k = ((s%SPB)+SPB)%SPB;
+  const at = time + (s%2 ? 0.16*stepLen : 0);
+  const snow = snowAt(s);
+  const ev = {time:at, step:s, chord:null, glock:null, gvel:0, kick:false, bell:false, snow};
+  windGain.gain.setTargetAtTime(0.05*snow*snow, time, 1.5);
+  windBp.Q.value = 0.8 + snow;
+  for(let i=0; i<2; i++) if(Math.random() < 0.35) crackle(time + Math.random()*stepLen);
+
+  if(!muted.chord){
+    const c = chordAt(s), barLen = stepLen*SPB;
+    if(k === 0){
+      const notes = [2,4,6,8].map(o => degToMidi(62, c+o));
+      notes.forEach((m, i) => piano(m, time + i*0.03 + Math.random()*0.01, 0.55 - i*0.04, barLen*0.9));
+      piano(degToMidi(50, c), time, 0.5, barLen);
+      subBass(degToMidi(38, c), time, barLen);
+      ev.chord = c; lastChord = c;
+    } else if(k === 5){
+      [4,8].forEach((o, i) => piano(degToMidi(62, c+o), at + i*0.04, 0.28, barLen*0.5));
+    }
+  }
+  const v = val('hit', s);
+  if(!muted.hit && v > 0){
+    let d = muted.glock ? 0 : Math.round(val('glock', s));
+    if(!Number.isFinite(d)) d = 0;
+    const m = degToMidi(74, clamp(d, -4, 14)), vel = clamp(v, 0.05, 1);
+    glock(m, at, vel);
+    ev.glock = clamp(d, -4, 14); ev.gvel = vel;
+  }
+  if(snow > 0.55 && s%2 && Math.random() < (snow - 0.55)*1.1){ sleighBells(at, 0.4 + 0.6*snow); ev.bell = true; }
+  if(beatOn){
+    if(k === 0 || k === 5){ kick(at); ev.kick = true; }
+    if(k === 2 || k === 6) brush(at);
+    hat(at, s%2 ? 0.018 : 0.03);
+  }
+  events.push(ev);
+}
+function scheduler(){
+  while(nextTime < ctx.currentTime + 0.2){ playStep(step, nextTime); nextTime += 30/bpm; step++; }
+}
+
+const playBtn = $('play'), playIcon = $('playIcon');
+function togglePlay(){
+  if(!ctx) initAudio();
+  ctx.resume();
+  playing = !playing;
+  const t = ctx.currentTime;
+  master.gain.cancelScheduledValues(t);
+  if(playing){
+    master.gain.setTargetAtTime(volume, t, 0.3);
+    step = 0; nextTime = t + 0.15; events.length = 0;
+    scheduler(); timer = setInterval(scheduler, 40);
+    playIcon.innerHTML = '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'; playBtn.setAttribute('aria-label', '停止');
+  } else {
+    clearInterval(timer); events.length = 0;
+    master.gain.setTargetAtTime(0, t, 0.8);
+    playIcon.innerHTML = '<path d="M7 4.5v15l13-7.5z"/>'; playBtn.setAttribute('aria-label', '再生');
+  }
+}
+playBtn.addEventListener('click', togglePlay);
+document.addEventListener('keydown', e => {
+  if(e.code === 'Space' && !/INPUT|SELECT|TEXTAREA|BUTTON/.test(document.activeElement.tagName)){ e.preventDefault(); togglePlay(); }
+});
+
+/* ---------- graphs ---------- */
+let curStep = 0, graphsDirty = true;
+const DPR = () => Math.min(2, window.devicePixelRatio || 1);
+const ro = new ResizeObserver(() => {
+  for(const c of Object.values(cards)){ const r = c.canvas.getBoundingClientRect(); c.canvas.width = Math.max(1, r.width*DPR()); c.canvas.height = Math.max(1, r.height*DPR()); }
+  graphsDirty = true;
+});
+for(const c of Object.values(cards)) ro.observe(c.canvas);
+
+function drawGraph(c){
+  const {tr, canvas} = c, g = canvas.getContext('2d'), W = canvas.width, H = canvas.height, px = DPR();
+  g.clearRect(0,0,W,H);
+  const span = SPB*tr.bars, start = Math.floor(curStep/span)*span;
+  const N = Math.min(span*4, 512), xs = [], vs = [];
+  for(let i=0;i<=N;i++){ const t = start + span*i/N; xs.push(t); vs.push(val(tr.id, t)); }
+  let lo, hi;
+  if(tr.fixed) [lo,hi] = tr.fixed;
+  else {
+    const f = vs.filter(Number.isFinite);
+    lo = f.length ? Math.min(...f) : 0; hi = f.length ? Math.max(...f) : 7;
+    if(hi - lo < 1e-6){ lo -= 1; hi += 1; }
+    const pad = (hi-lo)*0.16; lo -= pad; hi += pad;
+  }
+  const pl = 4*px, pr = 4*px, pt = 12*px, pb = 12*px;
+  const X = t => pl + (t-start)/span*(W-pl-pr);
+  const Y = v => pt + (1-(clamp(v,lo,hi)-lo)/(hi-lo))*(H-pt-pb);
+  for(let s=start; s<=start+span; s+=SPB){
+    g.strokeStyle = 'rgba(214,234,248,.08)'; g.lineWidth = px; g.beginPath(); g.moveTo(X(s), 0); g.lineTo(X(s), H); g.stroke();
+  }
+  if(tr.stems){
+    for(let s=start; s<start+span; s++){
+      const v = val(tr.id, s); if(!(v > 0)) continue;
+      const x = X(s), y = Y(v);
+      g.strokeStyle = c.color; g.globalAlpha = 0.5; g.lineWidth = 1.2*px; g.beginPath(); g.moveTo(x, Y(0)); g.lineTo(x, y); g.stroke(); g.globalAlpha = 1;
+      g.fillStyle = c.color; g.beginPath(); g.arc(x, y, 2.6*px, 0, Math.PI*2); g.fill();
+    }
+  } else {
+    if(tr.id === 'snow'){
+      const grad = g.createLinearGradient(0, pt, 0, H); grad.addColorStop(0, c.color + '40'); grad.addColorStop(1, c.color + '00');
+      g.beginPath(); g.moveTo(X(xs[0]), H);
+      for(let i=0;i<=N;i++) if(Number.isFinite(vs[i])) g.lineTo(X(xs[i]), Y(vs[i]));
+      g.lineTo(X(xs[N]), H); g.closePath(); g.fillStyle = grad; g.fill();
+      g.strokeStyle = 'rgba(239,122,122,.45)'; g.setLineDash([2*px,4*px]); g.beginPath(); g.moveTo(pl, Y(0.55)); g.lineTo(W-pr, Y(0.55)); g.stroke(); g.setLineDash([]);
+      g.font = `${10*px}px "JetBrains Mono", monospace`; g.fillStyle = 'rgba(239,122,122,.8)'; g.fillText('BELLS', W-pr-36*px, Y(0.55)-4*px);
+    }
+    g.beginPath(); let pen = false;
+    for(let i=0;i<=N;i++){
+      const v = vs[i]; if(!Number.isFinite(v)){ pen = false; continue; }
+      const x = X(xs[i]), y = Y(v); pen ? g.lineTo(x,y) : g.moveTo(x,y); pen = true;
+    }
+    g.strokeStyle = c.color; g.lineWidth = 1.4*px; g.globalAlpha = tr.id === 'glock' ? 0.4 : 0.9; g.stroke(); g.globalAlpha = 1;
+    if(tr.id === 'glock'){
+      for(let s=start; s<start+span; s++){
+        const v = val('hit', s); if(!(v > 0)) continue;
+        const n = Math.round(val('glock', s)); if(!Number.isFinite(n)) continue;
+        // little snowflake marks where the bars ring
+        const x = X(s), y = Y(n), r = (2.5 + 3*clamp(v,0,1))*px;
+        g.strokeStyle = c.color; g.lineWidth = px;
+        g.beginPath(); for(let a=0; a<3; a++){ const ang = a*Math.PI/3; g.moveTo(x - Math.cos(ang)*r, y - Math.sin(ang)*r); g.lineTo(x + Math.cos(ang)*r, y + Math.sin(ang)*r); } g.stroke();
+      }
+    }
+    if(tr.id === 'chord'){
+      g.font = `${10*px}px "JetBrains Mono", monospace`; g.fillStyle = 'rgba(223,243,255,.7)';
+      let prev = null;
+      for(let b=start; b<start+span; b+=SPB){ const c2 = chordAt(b); if(c2 !== prev){ g.fillText(chordName(c2), X(b)+3*px, H-3*px); prev = c2; } }
+    }
+  }
+  const hx = X(curStep);
+  const ph = g.createLinearGradient(0,0,0,H); ph.addColorStop(0,'rgba(238,246,251,0)'); ph.addColorStop(0.5,'rgba(238,246,251,.75)'); ph.addColorStop(1,'rgba(238,246,251,0)');
+  g.strokeStyle = ph; g.lineWidth = 1.2*px; g.beginPath(); g.moveTo(hx, 0); g.lineTo(hx, H); g.stroke();
+  if(tr.id !== 'chord'){
+    g.font = `${10*px}px "JetBrains Mono", monospace`; g.fillStyle = 'rgba(143,167,186,.85)';
+    g.fillText(+hi.toFixed(2), pl+2*px, pt); g.fillText(+lo.toFixed(2), pl+2*px, H-3*px);
+  }
+}
+const chordBig = $('chordBig');
+function updateReadouts(){
+  const s = curStep, c = chordAt(s), v = val('hit', s), d = Math.round(val('glock', s)), sn = snowAt(s);
+  cards.chord.readout.textContent = muted.chord ? '—' : chordName(c);
+  if(chordBig.textContent !== chordName(c)) chordBig.textContent = chordName(c);
+  cards.glock.readout.textContent = Number.isFinite(d) ? midiName(degToMidi(74, clamp(d, -4, 14))) : '—';
+  cards.hit.readout.textContent = v > 0 ? Math.round(clamp(v,0,1)*100) + '%' : '休み';
+  cards.snow.readout.textContent = sn < 0.05 ? '晴れ' : sn < 0.3 ? 'ちらちら' : sn < 0.55 ? 'しんしん' : sn < 0.8 ? '鈴の音' : '大雪';
+}
+
+/* ---------- scene: snow night, aurora, ice cube, kamakura ---------- */
+const bg = $('bg'), bx = bg.getContext('2d');
+const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+let W = 0, H = 0, k = 1;
+function resizeBg(){ k = DPR(); W = bg.width = innerWidth*k; H = bg.height = innerHeight*k; }
+addEventListener('resize', resizeBg); resizeBg();
+const stars = Array.from({length:140}, () => ({x:Math.random(), y:Math.random()*0.6, r:Math.random(), ph:Math.random()*6}));
+const flakes = Array.from({length:420}, () => ({x:Math.random(), y:Math.random(), z:Math.random(), ph:Math.random()*6}));
+const sparks = [];
+let snowVis = 0.5, snowTarget = 0.5, aur = 0.3, warm = 0.4, pulse = 0, bell = 0, rot = 0.5;
+const V = [[-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],[-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]];
+const FACES = [[0,1,2,3],[4,7,6,5],[0,4,5,1],[3,2,6,7],[0,3,7,4],[1,5,6,2]];
+const EDGES = [[0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],[0,4],[1,5],[2,6],[3,7]];
+const LIGHT = (() => { const v = [-0.5,-0.7,-0.5], l = Math.hypot(...v); return v.map(x => x/l); })();
+const hillY = x => H*0.76 + Math.sin(x/W*3.1 + 0.6)*H*0.025 + Math.sin(x/W*7.3)*H*0.008;
+
+function spark(deg, vel){
+  const m = Math.min(W,H);
+  const tx = W*(0.1 + 0.8*fract((deg+4)*0.37)), ty = H*(0.08 + 0.32*(1 - clamp((deg+4)/18, 0, 1)));
+  sparks.push({x:tx, y:ty, r:(4 + 8*vel)*k, a:1, rot:Math.random()*Math.PI});
+}
+function drawStar(x, y, r, rotA){
+  bx.beginPath();
+  for(let i=0;i<4;i++){
+    const a = rotA + i*Math.PI/2;
+    bx.moveTo(x, y); bx.lineTo(x + Math.cos(a)*r, y + Math.sin(a)*r);
+  }
+  bx.stroke();
+}
+function drawScene(dt, now){
+  const rm = reduce.matches, m = Math.min(W,H), sec = now/1000;
+  snowVis += (snowTarget - snowVis)*Math.min(1, dt*0.6);
+
+  const sky = bx.createLinearGradient(0,0,0,H*0.8);
+  sky.addColorStop(0, '#050d18'); sky.addColorStop(0.6, '#0c2236'); sky.addColorStop(1, '#173a52');
+  bx.fillStyle = sky; bx.fillRect(0,0,W,H);
+
+  for(const s of stars){
+    const tw = 0.4 + 0.6*Math.abs(Math.sin(sec*0.8 + s.ph));
+    bx.fillStyle = `rgba(230,244,255,${(0.25 + 0.5*s.r)*tw*(1 - snowVis*0.6)})`;
+    bx.fillRect(s.x*W, s.y*H, (0.6 + s.r*1.2)*k, (0.6 + s.r*1.2)*k);
+  }
+  // aurora ribbons
+  for(const [base, hue, amp, speed] of [[0.2, '134,208,173', 0.05, 0.08], [0.27, '168,228,255', 0.04, -0.06]]){
+    const step = 6*k;
+    for(let x=0; x<W; x+=step){
+      const y = H*base + Math.sin(x/W*5 + sec*speed*3)*H*amp + Math.sin(x/W*13 + sec*speed*7)*H*amp*0.3;
+      const hgt = H*(0.1 + 0.05*Math.sin(x/W*9 + sec*0.4));
+      const g = bx.createLinearGradient(0, y, 0, y + hgt);
+      const a = (0.05 + 0.13*aur)*(0.6 + 0.4*Math.sin(x/W*4 + sec*0.3));
+      g.addColorStop(0, `rgba(${hue},0)`); g.addColorStop(0.3, `rgba(${hue},${a})`); g.addColorStop(1, `rgba(${hue},0)`);
+      bx.fillStyle = g; bx.fillRect(x, y, step + 1, hgt);
+    }
+  }
+  // far hill with firs
+  bx.fillStyle = '#284a63';
+  bx.beginPath(); bx.moveTo(0, H);
+  for(let x=0; x<=W; x+=8*k) bx.lineTo(x, H*0.68 + Math.sin(x/W*4.2 + 2)*H*0.03);
+  bx.lineTo(W, H); bx.closePath(); bx.fill();
+  for(let i=0;i<9;i++){
+    const x = W*(0.04 + i*0.05 + (i%2)*0.012), y = H*0.68 + Math.sin(x/W*4.2 + 2)*H*0.03, h = m*(0.05 + (i%3)*0.015);
+    bx.fillStyle = '#1b3549'; bx.beginPath(); bx.moveTo(x, y - h); bx.lineTo(x + h*0.32, y + 2*k); bx.lineTo(x - h*0.32, y + 2*k); bx.closePath(); bx.fill();
+    bx.fillStyle = 'rgba(223,243,255,.55)'; bx.beginPath(); bx.moveTo(x, y - h); bx.lineTo(x + h*0.1, y - h*0.7); bx.lineTo(x - h*0.1, y - h*0.7); bx.closePath(); bx.fill();
+  }
+  // near snow field
+  const snowG = bx.createLinearGradient(0, H*0.72, 0, H);
+  snowG.addColorStop(0, '#c9dfee'); snowG.addColorStop(1, '#6f8ea7');
+  bx.fillStyle = snowG; bx.beginPath(); bx.moveTo(0, H);
+  for(let x=0; x<=W; x+=8*k) bx.lineTo(x, hillY(x));
+  bx.lineTo(W, H); bx.closePath(); bx.fill();
+
+  // kamakura
+  const kx = W*0.73, ky = hillY(W*0.73) + H*0.01, R = m*0.12;
+  const flick = 0.85 + 0.1*Math.sin(sec*9) + 0.05*Math.sin(sec*23.7);
+  const glow = (0.55 + 0.45*warm)*flick;
+  const spill = bx.createRadialGradient(kx, ky, R*0.2, kx, ky, R*2.4);
+  spill.addColorStop(0, `rgba(255,179,107,${0.35*glow})`); spill.addColorStop(1, 'rgba(255,179,107,0)');
+  bx.fillStyle = spill; bx.beginPath(); bx.ellipse(kx, ky, R*2.4, R*0.9, 0, 0, Math.PI*2); bx.fill();
+  const dome = bx.createRadialGradient(kx - R*0.35, ky - R*0.7, R*0.1, kx, ky - R*0.3, R*1.2);
+  dome.addColorStop(0, '#f4fbff'); dome.addColorStop(0.7, '#bcd3e4'); dome.addColorStop(1, '#8aa6bd');
+  bx.fillStyle = dome; bx.beginPath(); bx.ellipse(kx, ky, R, R*0.82, 0, Math.PI, 0); bx.closePath(); bx.fill();
+  bx.strokeStyle = 'rgba(255,255,255,.35)'; bx.lineWidth = k; bx.stroke();
+  // warm doorway
+  const dw = R*0.36, dh = R*0.46, dx = kx + R*0.12;
+  const door = bx.createRadialGradient(dx, ky - dh*0.3, 0, dx, ky - dh*0.3, dh*1.2);
+  door.addColorStop(0, `rgba(255,214,150,${glow})`); door.addColorStop(0.6, `rgba(255,150,70,${0.85*glow})`); door.addColorStop(1, `rgba(140,60,30,${0.9})`);
+  bx.fillStyle = door; bx.beginPath(); bx.moveTo(dx - dw, ky); bx.lineTo(dx - dw, ky - dh*0.45); bx.ellipse(dx, ky - dh*0.45, dw, dh*0.55, 0, Math.PI, 0); bx.lineTo(dx + dw, ky); bx.closePath(); bx.fill();
+  const halo = bx.createRadialGradient(dx, ky - dh*0.4, 0, dx, ky - dh*0.4, dh*2);
+  halo.addColorStop(0, `rgba(255,190,120,${0.25*glow})`); halo.addColorStop(1, 'rgba(255,190,120,0)');
+  bx.fillStyle = halo; bx.beginPath(); bx.arc(dx, ky - dh*0.4, dh*2, 0, Math.PI*2); bx.fill();
+
+  // small fir with a few lights (the bit of Christmas)
+  const tx = kx - R*1.55, ty = hillY(tx) + H*0.005, th = R*1.25;
+  bx.fillStyle = '#244a3f';
+  for(let i=0;i<3;i++){ const yy = ty - th*(0.25 + i*0.27), w = th*(0.36 - i*0.08); bx.beginPath(); bx.moveTo(tx, yy - th*0.33); bx.lineTo(tx + w, yy + th*0.05); bx.lineTo(tx - w, yy + th*0.05); bx.closePath(); bx.fill(); }
+  bx.fillStyle = 'rgba(240,250,255,.8)';
+  for(let i=0;i<3;i++){ const yy = ty - th*(0.25 + i*0.27), w = th*(0.36 - i*0.08); bx.beginPath(); bx.moveTo(tx, yy - th*0.33); bx.lineTo(tx + w*0.35, yy - th*0.2); bx.lineTo(tx - w*0.35, yy - th*0.2); bx.closePath(); bx.fill(); }
+  const bulbs = [[-0.18,0.2,'239,122,122'],[0.16,0.28,'255,205,120'],[-0.08,0.48,'255,205,120'],[0.1,0.58,'239,122,122'],[-0.14,0.75,'168,228,255'],[0.02,0.86,'255,205,120']];
+  bulbs.forEach(([ox, oy, col], i) => {
+    const tw = 0.35 + 0.3*Math.abs(Math.sin(sec*1.3 + i*1.7)) + 0.6*bell;
+    const bxp = tx + ox*th, byp = ty - th*(1 - oy)*0.9;
+    const g = bx.createRadialGradient(bxp, byp, 0, bxp, byp, 6*k);
+    g.addColorStop(0, `rgba(${col},${Math.min(1, tw)})`); g.addColorStop(1, `rgba(${col},0)`);
+    bx.fillStyle = g; bx.beginPath(); bx.arc(bxp, byp, 6*k, 0, Math.PI*2); bx.fill();
+  });
+  bx.fillStyle = `rgba(255,220,140,${0.6 + 0.4*bell})`; drawStarFill(tx, ty - th*1.05, 4*k);
+
+  // the ice cube
+  rot += dt*(rm ? 0.03 : 0.12);
+  const cx = W*0.4, cy = H*0.47 + Math.sin(sec*0.5)*m*0.008, size = m*0.085*(1 + (rm ? 0.01 : 0.05)*pulse);
+  const ca = Math.cos(0.5), sa = Math.sin(0.5), cb = Math.cos(rot), sb = Math.sin(rot);
+  const P = V.map(([x,y,z]) => { const x1 = x*cb + z*sb, z1 = -x*sb + z*cb, y2 = y*ca - z1*sa, z2 = y*sa + z1*ca, p = size*3.6/(z2+3.6); return {X:x1, Y:y2, Z:z2, x:cx + x1*p, y:cy + y2*p}; });
+  const iceGlow = bx.createRadialGradient(cx, cy, 0, cx, cy, size*3);
+  iceGlow.addColorStop(0, `rgba(168,228,255,${0.08 + 0.12*pulse})`); iceGlow.addColorStop(1, 'rgba(168,228,255,0)');
+  bx.fillStyle = iceGlow; bx.beginPath(); bx.arc(cx, cy, size*3, 0, Math.PI*2); bx.fill();
+  const faces = FACES.map(f => ({f, n:[0,1,2].map(a => f.reduce((s,i) => s + [P[i].X,P[i].Y,P[i].Z][a], 0)/4)})).sort((a,b) => b.n[2] - a.n[2]);
+  for(const {f, n} of faces){
+    const front = n[2] < -0.278, d = Math.max(0, n[0]*LIGHT[0] + n[1]*LIGHT[1] + n[2]*LIGHT[2]);
+    const a = P[f[0]], c = P[f[2]];
+    const gr = bx.createLinearGradient(a.x, a.y, c.x, c.y);
+    gr.addColorStop(0, `rgba(235,250,255,${front ? 0.18 + 0.3*d : 0.06})`);
+    gr.addColorStop(0.55, `rgba(150,215,245,${front ? 0.1 + 0.15*d : 0.04})`);
+    gr.addColorStop(1, `rgba(90,170,215,${front ? 0.14 : 0.05})`);
+    bx.beginPath(); f.forEach((i,j) => j ? bx.lineTo(P[i].x, P[i].y) : bx.moveTo(P[i].x, P[i].y)); bx.closePath();
+    bx.fillStyle = gr; bx.fill();
+  }
+  bx.save(); bx.strokeStyle = 'rgba(235,250,255,.75)'; bx.lineWidth = 1.2*k; bx.shadowColor = 'rgba(168,228,255,.9)'; bx.shadowBlur = (6 + 14*pulse)*k;
+  bx.beginPath(); for(const [a,b] of EDGES){ bx.moveTo(P[a].x, P[a].y); bx.lineTo(P[b].x, P[b].y); } bx.stroke(); bx.restore();
+  // frost crack inside
+  bx.strokeStyle = 'rgba(255,255,255,.25)'; bx.lineWidth = k; bx.beginPath();
+  bx.moveTo((P[0].x*2 + P[6].x)/3, (P[0].y*2 + P[6].y)/3); bx.lineTo((P[1].x + P[7].x)/2, (P[1].y + P[7].y)/2); bx.lineTo((P[2].x*2 + P[4].x)/3, (P[2].y*2 + P[4].y)/3); bx.stroke();
+
+  // glock sparkles
+  bx.lineCap = 'round';
+  for(let i=sparks.length-1; i>=0; i--){
+    const s = sparks[i]; s.a -= dt*0.5; s.rot += dt*0.6;
+    if(s.a <= 0){ sparks.splice(i,1); continue; }
+    bx.strokeStyle = `rgba(223,243,255,${s.a})`; bx.lineWidth = 1.2*k;
+    drawStar(s.x, s.y, s.r*(1.4 - s.a*0.4), s.rot);
+    drawStar(s.x, s.y, s.r*0.5, s.rot + Math.PI/4);
+  }
+
+  // snowfall
+  const count = Math.floor(flakes.length*(0.1 + 0.9*snowVis)*(rm ? 0.4 : 1));
+  for(let i=0; i<count; i++){
+    const f = flakes[i];
+    const sp = (0.025 + 0.06*f.z)*(rm ? 0.5 : 1);
+    f.y += sp*dt; f.x += Math.sin(sec*0.6 + f.ph)*0.004*dt + 0.004*dt*snowVis;
+    if(f.y > 1.02){ f.y = -0.02; f.x = Math.random(); }
+    if(f.x > 1) f.x -= 1;
+    bx.fillStyle = `rgba(240,248,255,${0.35 + 0.5*f.z})`;
+    bx.beginPath(); bx.arc(f.x*W, f.y*H, (0.7 + 2*f.z)*k, 0, Math.PI*2); bx.fill();
+  }
+}
+function drawStarFill(x, y, r){
+  bx.beginPath();
+  for(let i=0;i<10;i++){ const a = -Math.PI/2 + i*Math.PI/5, rr = i%2 ? r*0.45 : r; i ? bx.lineTo(x + Math.cos(a)*rr, y + Math.sin(a)*rr) : bx.moveTo(x + Math.cos(a)*rr, y + Math.sin(a)*rr); }
+  bx.closePath(); bx.fill();
+}
+
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(0.05, (now - last)/1000); last = now;
+  if(playing && ctx){
+    const at = ctx.currentTime;
+    while(events.length && events[0].time <= at){
+      const e = events.shift();
+      if(e.step !== curStep){ curStep = e.step; graphsDirty = true; updateReadouts(); }
+      snowTarget = e.snow;
+      if(e.chord !== null){ aur = 1; warm = 1; }
+      if(e.glock !== null) spark(e.glock, e.gvel);
+      if(e.kick) pulse = 1;
+      if(e.bell) bell = 1;
+    }
+  } else {
+    snowTarget = 0.45;
+    pulse = Math.max(pulse, Math.exp(-((now/1000) % 1.4)*6)*0.6);
+  }
+  aur += (0.3 - aur)*Math.min(1, dt*0.25);
+  warm += (0.4 - warm)*Math.min(1, dt*0.3);
+  pulse *= Math.exp(-dt*5); bell *= Math.exp(-dt*3);
+  drawScene(dt, now);
+  if(graphsDirty){ for(const c of Object.values(cards)) drawGraph(c); graphsDirty = false; }
+  requestAnimationFrame(frame);
+}
+
+loadPreset('kamakura');
+updateReadouts();
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
