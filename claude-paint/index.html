@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Claude Paint</title>
+<style>
+  :root{--bg:#f4f1ec;--panel:#fff;--ink:#222;--muted:#666;--line:#ddd;--accent:#d97757;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+  header{padding:10px 16px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{font-size:18px;margin:0}
+  header .status{margin-left:auto;font-family:ui-monospace,Menlo,monospace;color:var(--muted)}
+  main{display:flex;gap:12px;padding:12px;align-items:flex-start;flex-wrap:wrap}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px}
+  #tools{width:170px;display:flex;flex-direction:column;gap:10px}
+  #tools h2,#cmdPanel h2{font-size:13px;margin:0 0 4px;color:var(--muted)}
+  .tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  button{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fafafa;cursor:pointer}
+  button:hover{background:#f0f0f0}
+  button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .swatches{display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+  .swatches button{padding:0;height:22px;border-radius:4px}
+  label.row{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  input[type=range]{width:90px}
+  #stageWrap{flex:1;min-width:320px}
+  #stage{position:relative;display:inline-block;max-width:100%;border:1px solid #bbb;background:#fff;touch-action:none;cursor:crosshair}
+  #stage canvas{display:block;max-width:100%}
+  #stage canvas.layer{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+  #cmdPanel{width:360px;display:flex;flex-direction:column;gap:8px}
+  #script{width:100%;height:260px;font:13px/1.4 ui-monospace,Menlo,monospace;border:1px solid var(--line);border-radius:6px;padding:8px;resize:vertical}
+  #log{font:12px ui-monospace,Menlo,monospace;white-space:pre-wrap;max-height:90px;overflow:auto;color:var(--muted)}
+  #log.err{color:#c0392b}
+  details{font-size:12.5px}
+  details code,details pre{font-family:ui-monospace,Menlo,monospace;font-size:12px}
+  details pre{background:#f7f7f7;padding:8px;border-radius:6px;overflow:auto;margin:6px 0}
+  .btnrow{display:flex;gap:6px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<header>
+  <h1>🎨 Claude Paint</h1>
+  <span>キャンバス: <span id="sizeLabel">800×600</span></span>
+  <span class="status" id="status" aria-live="polite">x: -, y: -</span>
+</header>
+
+<main>
+  <!-- 左：ツール -->
+  <section id="tools" class="panel" aria-label="ツール">
+    <div>
+      <h2>ツール</h2>
+      <div class="tool-grid" id="toolButtons">
+        <button data-tool="pen" id="tool-pen" class="active">✏️ ペン</button>
+        <button data-tool="eraser" id="tool-eraser">🧽 消しゴム</button>
+        <button data-tool="line" id="tool-line">／ 直線</button>
+        <button data-tool="rect" id="tool-rect">▭ 四角</button>
+        <button data-tool="ellipse" id="tool-ellipse">◯ 楕円</button>
+        <button data-tool="bucket" id="tool-bucket">🪣 塗りつぶし</button>
+        <button data-tool="text" id="tool-text">🔤 文字</button>
+        <button data-tool="picker" id="tool-picker">💧 スポイト</button>
+      </div>
+    </div>
+    <div>
+      <h2>色</h2>
+      <label class="row">線の色 <input type="color" id="strokeColor" value="#000000" aria-label="線の色"></label>
+      <label class="row">塗りの色 <input type="color" id="fillColor" value="#ffcc00" aria-label="塗りの色"></label>
+      <div class="swatches" id="swatches" aria-label="パレット"></div>
+    </div>
+    <div>
+      <h2>設定</h2>
+      <label class="row">太さ <input type="range" id="width" min="1" max="60" value="4"><span id="widthVal">4</span></label>
+      <label class="row">不透明度 <input type="range" id="alpha" min="0.05" max="1" step="0.05" value="1"><span id="alphaVal">1</span></label>
+      <label class="row">図形
+        <select id="shapeMode" aria-label="図形の描き方">
+          <option value="stroke">線のみ</option>
+          <option value="fill">塗りのみ</option>
+          <option value="both">線＋塗り</option>
+        </select>
+      </label>
+      <label class="row">文字サイズ <input type="number" id="fontSize" value="28" min="6" max="300" style="width:60px"></label>
+      <label class="row"><span>グリッド表示</span><input type="checkbox" id="gridToggle" checked></label>
+    </div>
+    <div class="btnrow">
+      <button id="btn-undo" title="Ctrl+Z">↶ 元に戻す</button>
+      <button id="btn-redo" title="Ctrl+Y">↷ やり直し</button>
+      <button id="btn-clear">🗑 全消去</button>
+      <button id="btn-save">💾 PNG保存</button>
+    </div>
+  </section>
+
+  <!-- 中央：キャンバス -->
+  <section id="stageWrap">
+    <div id="stage">
+      <canvas id="main" width="800" height="600" aria-label="描画キャンバス"></canvas>
+      <canvas id="preview" class="layer" width="800" height="600"></canvas>
+      <canvas id="grid" class="layer" width="800" height="600"></canvas>
+    </div>
+  </section>
+
+  <!-- 右：コマンド -->
+  <section id="cmdPanel" class="panel" aria-label="コマンド描画">
+    <h2>コマンドで描く（Claude向け）</h2>
+    <textarea id="script" spellcheck="false" aria-label="描画コマンド入力欄" placeholder="例:
+bg #bfe6ff
+fillcolor #ffd23f
+circle 650 110 55 fill"></textarea>
+    <div class="btnrow">
+      <button id="btn-run" class="active">▶ 実行</button>
+      <button id="btn-sample">サンプル読込</button>
+      <button id="btn-clearScript">入力欄を空にする</button>
+    </div>
+    <div id="log" aria-live="polite">準備完了</div>
+    <details open>
+      <summary><b>コマンド一覧</b>（1行1コマンド、座標は左上が 0,0。グリッドは50px刻み）</summary>
+<pre>// コメント
+color #ff0000          線・文字・バケツの色
+fillcolor #00aaff      図形の塗り色
+width 5                線の太さ
+alpha 0.6              不透明度 (0〜1)
+font 32                文字サイズ(px)
+bg #ffffff             背景色で全面を塗る
+clear                  白で全消去
+size 1024 768          キャンバスサイズ変更
+
+line x1 y1 x2 y2
+polyline x1 y1 x2 y2 x3 y3 ...
+polygon  x1 y1 x2 y2 x3 y3 ... [mode]
+rect x y w h [mode]
+roundrect x y w h r [mode]
+circle cx cy r [mode]
+ellipse cx cy rx ry [角度deg] [mode]
+arc cx cy r 開始deg 終了deg
+curve x1 y1 cx cy x2 y2            2次曲線
+bezier x1 y1 c1x c1y c2x c2y x2 y2  3次曲線
+dot x y [r]            点（塗り＝線の色）
+fill x y [色]          バケツ塗りつぶし
+text x y "文字列"
+
+[mode] = stroke(既定) | fill | both</pre>
+      <p>JavaScriptからも操作できます：<code>paint.run("circle 100 100 40 fill")</code>、<code>paint.undo()</code>、<code>paint.clear()</code>、<code>paint.toDataURL()</code>、<code>paint.getState()</code></p>
+    </details>
+  </section>
+</main>
+
+<script>
+(() => {
+  const main = document.getElementById('main');
+  const prev = document.getElementById('preview');
+  const grid = document.getElementById('grid');
+  const stage = document.getElementById('stage');
+  const ctx = main.getContext('2d', { willReadFrequently: true });
+  const pctx = prev.getContext('2d');
+  const gctx = grid.getContext('2d');
+  const $ = id => document.getElementById(id);
+
+  const state = {
+    tool: 'pen', color: '#000000', fillColor: '#ffcc00', width: 4,
+    alpha: 1, shapeMode: 'stroke', font: 28, bg: '#ffffff', grid: true
+  };
+  let undoStack = [], redoStack = [];
+
+  // ---------- 基本 ----------
+  function snapshot() {
+    undoStack.push(ctx.getImageData(0, 0, main.width, main.height));
+    if (undoStack.length > 60) undoStack.shift();
+    redoStack = [];
+  }
+  function undo() {
+    if (!undoStack.length) return false;
+    redoStack.push(ctx.getImageData(0, 0, main.width, main.height));
+    restore(undoStack.pop()); return true;
+  }
+  function redo() {
+    if (!redoStack.length) return false;
+    undoStack.push(ctx.getImageData(0, 0, main.width, main.height));
+    restore(redoStack.pop()); return true;
+  }
+  function restore(img) {
+    if (img.width !== main.width || img.height !== main.height) setSize(img.width, img.height, false);
+    ctx.putImageData(img, 0, 0);
+  }
+  function setSize(w, h, keep = true) {
+    const old = keep ? ctx.getImageData(0, 0, main.width, main.height) : null;
+    [main, prev, grid].forEach(c => { c.width = w; c.height = h; });
+    ctx.fillStyle = state.bg; ctx.fillRect(0, 0, w, h);
+    if (old) ctx.putImageData(old, 0, 0);
+    $('sizeLabel').textContent = `${w}×${h}`;
+    drawGrid();
+  }
+  function fillBg(color) {
+    state.bg = color;
+    ctx.save(); ctx.globalAlpha = 1; ctx.fillStyle = color;
+    ctx.fillRect(0, 0, main.width, main.height); ctx.restore();
+  }
+  function applyStyle(c) {
+    c.strokeStyle = state.color; c.fillStyle = state.fillColor;
+    c.lineWidth = state.width; c.lineCap = 'round'; c.lineJoin = 'round';
+    c.globalAlpha = state.alpha;
+  }
+  function finish(c, mode) {
+    if (mode === 'fill' || mode === 'both') c.fill();
+    if (mode === 'stroke' || mode === 'both') c.stroke();
+  }
+
+  // ---------- 描画プリミティブ ----------
+  const draw = {
+    line(c, x1, y1, x2, y2) { c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); },
+    poly(c, pts, closed, mode) {
+      c.beginPath(); c.moveTo(pts[0], pts[1]);
+      for (let i = 2; i < pts.length; i += 2) c.lineTo(pts[i], pts[i + 1]);
+      if (closed) c.closePath();
+      finish(c, closed ? mode : 'stroke');
+    },
+    rect(c, x, y, w, h, mode) { c.beginPath(); c.rect(x, y, w, h); finish(c, mode); },
+    roundrect(c, x, y, w, h, r, mode) { c.beginPath(); c.roundRect(x, y, w, h, r); finish(c, mode); },
+    ellipse(c, cx, cy, rx, ry, rot, mode) {
+      c.beginPath(); c.ellipse(cx, cy, Math.abs(rx), Math.abs(ry), rot * Math.PI / 180, 0, Math.PI * 2); finish(c, mode);
+    },
+    arc(c, cx, cy, r, a1, a2) { c.beginPath(); c.arc(cx, cy, r, a1 * Math.PI / 180, a2 * Math.PI / 180); c.stroke(); },
+    curve(c, x1, y1, cx, cy, x2, y2) { c.beginPath(); c.moveTo(x1, y1); c.quadraticCurveTo(cx, cy, x2, y2); c.stroke(); },
+    bezier(c, x1, y1, a, b, d, e, x2, y2) { c.beginPath(); c.moveTo(x1, y1); c.bezierCurveTo(a, b, d, e, x2, y2); c.stroke(); },
+    dot(c, x, y, r) { c.save(); c.fillStyle = state.color; c.beginPath(); c.arc(x, y, r, 0, Math.PI * 2); c.fill(); c.restore(); },
+    text(c, x, y, s) {
+      c.save(); c.fillStyle = state.color; c.textBaseline = 'alphabetic';
+      c.font = `${state.font}px system-ui, "Hiragino Sans", "Noto Sans JP", sans-serif`;
+      c.fillText(s, x, y); c.restore();
+    }
+  };
+
+  function colorToRGBA(color) {
+    const t = document.createElement('canvas').getContext('2d');
+    t.fillStyle = '#000'; t.fillStyle = color; t.fillRect(0, 0, 1, 1);
+    return Array.from(t.getImageData(0, 0, 1, 1).data);
+  }
+
+  function floodFill(x, y, color, tol = 40) {
+    x = Math.floor(x); y = Math.floor(y);
+    const w = main.width, h = main.height;
+    if (x < 0 || y < 0 || x >= w || y >= h) return;
+    const img = ctx.getImageData(0, 0, w, h), d = img.data;
+    const [r, g, b] = colorToRGBA(color);
+    const i0 = (y * w + x) * 4;
+    const tr = d[i0], tg = d[i0 + 1], tb = d[i0 + 2], ta = d[i0 + 3];
+    if (tr === r && tg === g && tb === b && ta === 255) return;
+    const match = p => { const i = p * 4;
+      return Math.abs(d[i] - tr) <= tol && Math.abs(d[i + 1] - tg) <= tol &&
+             Math.abs(d[i + 2] - tb) <= tol && Math.abs(d[i + 3] - ta) <= tol; };
+    const seen = new Uint8Array(w * h);
+    const stack = [x, y];
+    while (stack.length) {
+      let sy = stack.pop(), sx = stack.pop();
+      while (sx >= 0 && !seen[sy * w + sx] && match(sy * w + sx)) sx--;
+      sx++;
+      let up = false, down = false;
+      while (sx < w) {
+        const p = sy * w + sx;
+        if (seen[p] || !match(p)) break;
+        seen[p] = 1; const i = p * 4;
+        d[i] = r; d[i + 1] = g; d[i + 2] = b; d[i + 3] = 255;
+        if (sy > 0) { const q = p - w; if (!seen[q] && match(q)) { if (!up) { stack.push(sx, sy - 1); up = true; } } else up = false; }
+        if (sy < h - 1) { const q = p + w; if (!seen[q] && match(q)) { if (!down) { stack.push(sx, sy + 1); down = true; } } else down = false; }
+        sx++;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  // ---------- グリッド ----------
+  function drawGrid() {
+    gctx.clearRect(0, 0, grid.width, grid.height);
+    if (!state.grid) return;
+    gctx.save();
+    gctx.font = '10px ui-monospace, Menlo, monospace';
+    for (let x = 0; x <= grid.width; x += 50) {
+      gctx.strokeStyle = x % 100 === 0 ? 'rgba(0,120,255,.35)' : 'rgba(0,120,255,.15)';
+      gctx.beginPath(); gctx.moveTo(x + .5, 0); gctx.lineTo(x + .5, grid.height); gctx.stroke();
+      if (x % 100 === 0 && x > 0) { gctx.fillStyle = 'rgba(0,90,200,.8)'; gctx.fillText(x, x + 2, 10); }
+    }
+    for (let y = 0; y <= grid.height; y += 50) {
+      gctx.strokeStyle = y % 100 === 0 ? 'rgba(0,120,255,.35)' : 'rgba(0,120,255,.15)';
+      gctx.beginPath(); gctx.moveTo(0, y + .5); gctx.lineTo(grid.width, y + .5); gctx.stroke();
+      if (y % 100 === 0 && y > 0) { gctx.fillStyle = 'rgba(0,90,200,.8)'; gctx.fillText(y, 2, y - 2); }
+    }
+    gctx.restore();
+  }
+
+  // ---------- コマンド ----------
+  const MODES = ['stroke', 'fill', 'both'];
+  function nums(args, n, name) {
+    const out = args.slice(0, n).map(Number);
+    if (out.length < n || out.some(isNaN)) throw new Error(`${name}: 数値が${n}個必要です`);
+    return out;
+  }
+  function takeMode(args) {
+    if (args.length && MODES.includes(args[args.length - 1].toLowerCase())) return args.pop().toLowerCase();
+    return 'stroke';
+  }
+  function exec(cmd, args) {
+    applyStyle(ctx);
+    switch (cmd) {
+      case 'color': case 'stroke': state.color = args[0]; break;
+      case 'fillcolor': state.fillColor = args[0]; break;
+      case 'width': state.width = nums(args, 1, cmd)[0]; break;
+      case 'alpha': state.alpha = Math.min(1, Math.max(0, nums(args, 1, cmd)[0])); break;
+      case 'font': state.font = nums(args, 1, cmd)[0]; break;
+      case 'bg': fillBg(args[0]); break;
+      case 'clear': fillBg('#ffffff'); break;
+      case 'size': { const [w, h] = nums(args, 2, cmd); setSize(w, h); break; }
+      case 'line': draw.line(ctx, ...nums(args, 4, cmd)); break;
+      case 'polyline': {
+        const pts = args.map(Number);
+        if (pts.length < 4 || pts.length % 2 || pts.some(isNaN)) throw new Error('polyline: x y の組が2つ以上必要です');
+        draw.poly(ctx, pts, false); break;
+      }
+      case 'polygon': {
+        const mode = takeMode(args); const pts = args.map(Number);
+        if (pts.length < 6 || pts.length % 2 || pts.some(isNaN)) throw new Error('polygon: x y の組が3つ以上必要です');
+        draw.poly(ctx, pts, true, mode); break;
+      }
+      case 'rect': { const m = takeMode(args); draw.rect(ctx, ...nums(args, 4, cmd), m); break; }
+      case 'roundrect': { const m = takeMode(args); draw.roundrect(ctx, ...nums(args, 5, cmd), m); break; }
+      case 'circle': { const m = takeMode(args); const [x, y, r] = nums(args, 3, cmd); draw.ellipse(ctx, x, y, r, r, 0, m); break; }
+      case 'ellipse': {
+        const m = takeMode(args); const [x, y, rx, ry] = nums(args, 4, cmd);
+        const rot = args[4] !== undefined ? Number(args[4]) : 0;
+        draw.ellipse(ctx, x, y, rx, ry, rot, m); break;
+      }
+      case 'arc': draw.arc(ctx, ...nums(args, 5, cmd)); break;
+      case 'curve': draw.curve(ctx, ...nums(args, 6, cmd)); break;
+      case 'bezier': draw.bezier(ctx, ...nums(args, 8, cmd)); break;
+      case 'dot': { const [x, y] = nums(args, 2, cmd); draw.dot(ctx, x, y, args[2] !== undefined ? Number(args[2]) : state.width / 2); break; }
+      case 'fill': { const [x, y] = nums(args, 2, cmd); floodFill(x, y, args[2] || state.color); break; }
+      case 'text': { const [x, y] = nums(args, 2, cmd); draw.text(ctx, x, y, args.slice(2).join(' ')); break; }
+      default: throw new Error(`不明なコマンド: ${cmd}`);
+    }
+  }
+  function tokenize(line) {
+    return (line.match(/"[^"]*"|'[^']*'|\S+/g) || []).map(t => /^["'].*["']$/.test(t) ? t.slice(1, -1) : t);
+  }
+  function run(src) {
+    snapshot();
+    const errors = []; let count = 0;
+    String(src).split(/\r?\n|;(?=(?:[^"]*"[^"]*")*[^"]*$)/).forEach((raw, i) => {
+      const line = raw.trim();
+      if (!line || line.startsWith('//')) return;
+      const [cmd, ...args] = tokenize(line);
+      try { exec(cmd.toLowerCase(), args); count++; }
+      catch (e) { errors.push(`${i + 1}行目「${line}」: ${e.message}`); }
+    });
+    ctx.globalAlpha = 1;
+    syncUI();
+    const log = $('log');
+    log.className = errors.length ? 'err' : '';
+    log.textContent = errors.length ? `${count}件実行、エラー${errors.length}件:\n` + errors.join('\n') : `${count}件のコマンドを実行しました`;
+    return { ok: !errors.length, executed: count, errors };
+  }
+
+  // ---------- マウス描画 ----------
+  function pos(e) {
+    const r = main.getBoundingClientRect();
+    return { x: Math.round((e.clientX - r.left) * main.width / r.width),
+             y: Math.round((e.clientY - r.top) * main.height / r.height) };
+  }
+  let drawing = false, start = null, last = null;
+  stage.addEventListener('pointerdown', e => {
+    const p = pos(e);
+    if (state.tool === 'picker') {
+      const d = ctx.getImageData(p.x, p.y, 1, 1).data;
+      state.color = '#' + [d[0], d[1], d[2]].map(v => v.toString(16).padStart(2, '0')).join('');
+      syncUI(); return;
+    }
+    if (state.tool === 'bucket') { snapshot(); floodFill(p.x, p.y, state.color); return; }
+    if (state.tool === 'text') {
+      const s = prompt('入力する文字'); if (s) { snapshot(); draw.text(ctx, p.x, p.y, s); } return;
+    }
+    stage.setPointerCapture(e.pointerId);
+    drawing = true; start = last = p; snapshot();
+    if (state.tool === 'pen' || state.tool === 'eraser') {
+      applyStyle(ctx);
+      if (state.tool === 'eraser') { ctx.strokeStyle = state.bg; ctx.globalAlpha = 1; }
+      draw.line(ctx, p.x, p.y, p.x + .01, p.y);
+    }
+  });
+  stage.addEventListener('pointermove', e => {
+    const p = pos(e);
+    $('status').textContent = `x: ${p.x}, y: ${p.y}`;
+    if (!drawing) return;
+    if (state.tool === 'pen' || state.tool === 'eraser') {
+      draw.line(ctx, last.x, last.y, p.x, p.y); last = p; return;
+    }
+    pctx.clearRect(0, 0, prev.width, prev.height);
+    applyStyle(pctx); shape(pctx, start, p, e.shiftKey);
+  });
+  const end = e => {
+    if (!drawing) return; drawing = false;
+    const p = pos(e);
+    pctx.clearRect(0, 0, prev.width, prev.height);
+    if (!['pen', 'eraser'].includes(state.tool)) { applyStyle(ctx); shape(ctx, start, p, e.shiftKey); }
+    ctx.globalAlpha = 1;
+  };
+  stage.addEventListener('pointerup', end);
+  stage.addEventListener('pointercancel', end);
+  stage.addEventListener('pointerleave', () => { $('status').textContent = 'x: -, y: -'; });
+
+  function shape(c, a, b, square) {
+    let w = b.x - a.x, h = b.y - a.y;
+    if (square) { const s = Math.max(Math.abs(w), Math.abs(h)); w = Math.sign(w || 1) * s; h = Math.sign(h || 1) * s; }
+    if (state.tool === 'line') draw.line(c, a.x, a.y, a.x + w, a.y + h);
+    else if (state.tool === 'rect') draw.rect(c, a.x, a.y, w, h, state.shapeMode);
+    else if (state.tool === 'ellipse') draw.ellipse(c, a.x + w / 2, a.y + h / 2, w / 2, h / 2, 0, state.shapeMode);
+  }
+
+  // ---------- UI ----------
+  const palette = ['#000000','#ffffff','#7f7f7f','#c3c3c3','#e74c3c','#ff9f43','#feca57','#2ecc71','#1abc9c','#3498db','#2c3e50','#9b59b6','#ff6b9d','#8e5a2b','#f5d0a9','#a3d9ff','#006400','#ffd700'];
+  palette.forEach(c => {
+    const b = document.createElement('button');
+    b.style.background = c; b.title = c; b.setAttribute('aria-label', `色 ${c}`);
+    b.onclick = () => { state.color = c; syncUI(); };
+    b.oncontextmenu = ev => { ev.preventDefault(); state.fillColor = c; syncUI(); };
+    $('swatches').appendChild(b);
+  });
+
+  function toHex(c) { const [r, g, b] = colorToRGBA(c); return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join(''); }
+  function syncUI() {
+    $('strokeColor').value = toHex(state.color);
+    $('fillColor').value = toHex(state.fillColor);
+    $('width').value = state.width; $('widthVal').textContent = state.width;
+    $('alpha').value = state.alpha; $('alphaVal').textContent = state.alpha;
+    $('shapeMode').value = state.shapeMode; $('fontSize').value = state.font;
+    document.querySelectorAll('#toolButtons button').forEach(b => b.classList.toggle('active', b.dataset.tool === state.tool));
+  }
+  function setTool(t) { state.tool = t; syncUI(); }
+
+  document.querySelectorAll('#toolButtons button').forEach(b => b.onclick = () => setTool(b.dataset.tool));
+  $('strokeColor').oninput = e => state.color = e.target.value;
+  $('fillColor').oninput = e => state.fillColor = e.target.value;
+  $('width').oninput = e => { state.width = +e.target.value; $('widthVal').textContent = state.width; };
+  $('alpha').oninput = e => { state.alpha = +e.target.value; $('alphaVal').textContent = state.alpha; };
+  $('shapeMode').onchange = e => state.shapeMode = e.target.value;
+  $('fontSize').oninput = e => state.font = +e.target.value || 28;
+  $('gridToggle').onchange = e => { state.grid = e.target.checked; drawGrid(); };
+  $('btn-undo').onclick = undo;
+  $('btn-redo').onclick = redo;
+  $('btn-clear').onclick = () => { snapshot(); fillBg('#ffffff'); };
+  $('btn-save').onclick = () => {
+    const a = document.createElement('a');
+    a.href = main.toDataURL('image/png'); a.download = 'claude-paint.png'; a.click();
+  };
+  $('btn-run').onclick = () => run($('script').value);
+  $('btn-clearScript').onclick = () => { $('script').value = ''; $('script').focus(); };
+  $('btn-sample').onclick = () => {
+    $('script').value = `// サンプル：家と山
+bg #bfe6ff
+fillcolor #ffd23f
+color #f2a900
+width 3
+circle 650 110 55 both
+fillcolor #6aa84f
+polygon 0 450 180 260 360 450 fill
+polygon 250 450 470 220 700 450 fill
+fillcolor #8bc34a
+rect 0 440 800 160 fill
+fillcolor #f4e1c1
+color #5d4037
+rect 120 360 160 130 both
+fillcolor #c0392b
+polygon 100 365 200 290 300 365 both
+fillcolor #5d4037
+rect 180 420 40 70 fill
+color #333333
+font 28
+text 470 560 "Hello from Claude"`;
+  };
+  $('script').addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); run($('script').value); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); redo(); }
+  });
+
+  // ---------- 外部API（Claude in Chrome から JS で呼べる） ----------
+  window.paint = {
+    run,
+    undo, redo,
+    clear: () => { snapshot(); fillBg('#ffffff'); },
+    setTool,
+    setGrid: on => { state.grid = !!on; $('gridToggle').checked = state.grid; drawGrid(); },
+    getState: () => ({ ...state, width_px: main.width, height_px: main.height }),
+    toDataURL: () => main.toDataURL('image/png'),
+    help: () => document.querySelector('details pre').textContent
+  };
+
+  fillBg('#ffffff'); drawGrid(); syncUI();
+})();
+</script>
+</body>
+</html>
